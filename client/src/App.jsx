@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
@@ -71,15 +71,23 @@ function App() {
     }
   }, [user]);
 
+  const notifiedAlertIds = useRef(new Set());
+
   useEffect(() => {
-    // Show welcome alerts popup only once per session after alerts are fetched
-    if (user && alerts.length > 0 && !sessionStorage.getItem('hasShownWelcomeAlerts')) {
+    // Cleanup notified list: remove IDs that are no longer in the current active alerts list.
+    // This ensures that if an alert is re-activated, we treat it as "new".
+    const currentIds = new Set(alerts.map(a => a.id));
+    notifiedAlertIds.current.forEach(id => {
+      if (!currentIds.has(id)) notifiedAlertIds.current.delete(id);
+    });
+
+    // Only auto-show the popup stack if we detect a brand new alert ID
+    const hasNewAlerts = alerts.some(alert => !notifiedAlertIds.current.has(alert.id));
+    
+    if (user && alerts.length > 0 && hasNewAlerts) {
       setShowWelcomeAlertsPopup(true);
-      sessionStorage.setItem('hasShownWelcomeAlerts', 'true');
-      setChatHistory([{ 
-        role: 'assistant', 
-        content: `Good morning, ${user.username}! I'm PharmaCopilot. I've synced with your live inventory. How can I help you today?` 
-      }]);
+      // Mark these as "notified" so they don't re-trigger the popup state
+      alerts.forEach(alert => notifiedAlertIds.current.add(alert.id));
     }
   }, [alerts, user]); // Depend on alerts and user
 
@@ -844,7 +852,7 @@ const KPICard = ({ title, value, color = "text-white" }) => (
 const StatusBadge = ({ qty, threshold }) => {
   let config = { label: 'Healthy', color: 'bg-teal-500/10 text-teal-400 border-teal-500/20' };
   if (qty === 0) config = { label: 'Stockout', color: 'bg-red-500/10 text-red-400 border-red-500/20' };
-  else if (qty <= threshold) config = { label: 'Low Stock', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' };
+  else if (qty <= 5) config = { label: 'Low Stock', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' };
   
   return (
     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${config.color}`}>

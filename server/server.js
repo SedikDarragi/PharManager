@@ -90,7 +90,7 @@ app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
     // 1. Context Gathering: Fetch current state of the pharmacy for the authenticated user
     db.refreshAlerts(req.user.id);
     const inventory = db.prepare('SELECT * FROM medications WHERE user_id = ?').all(req.user.id);
-    const alerts = db.prepare("SELECT alerts.* FROM alerts JOIN medications ON alerts.med_id = medications.id WHERE medications.user_id = ? AND status = 'active'").all(req.user.id);
+    const alerts = db.prepare("SELECT * FROM alerts WHERE user_id = ? AND status = 'active'").all(req.user.id);
     const today = new Date().toISOString().split('T')[0];
 
     // 2. Build the System Prompt
@@ -184,7 +184,7 @@ app.delete('/api/medications/:id', authenticateToken, (req, res) => {
 
 app.get('/api/alerts', authenticateToken, (req, res) => {
   db.refreshAlerts(req.user.id);
-  const alerts = db.prepare("SELECT alerts.* FROM alerts JOIN medications ON alerts.med_id = medications.id WHERE medications.user_id = ? AND status = 'active'").all(req.user.id);
+  const alerts = db.prepare("SELECT * FROM alerts WHERE user_id = ? AND status = 'active'").all(req.user.id);
   res.json(alerts);
 });
 
@@ -195,7 +195,7 @@ app.post('/api/alerts/:id/dismiss', authenticateToken, (req, res) => {
 
 app.get('/api/analytics/summary', authenticateToken, (req, res) => {
   const totalSkus = db.prepare('SELECT COUNT(*) as count FROM medications WHERE user_id = ?').get(req.user.id).count;
-  const lowStock = db.prepare('SELECT COUNT(*) as count FROM medications WHERE user_id = ? AND quantity <= reorder_threshold AND quantity > 0').get(req.user.id).count;
+  const lowStock = db.prepare('SELECT COUNT(*) as count FROM medications WHERE user_id = ? AND quantity <= 5 AND quantity > 0').get(req.user.id).count;
   const stockouts = db.prepare('SELECT COUNT(*) as count FROM medications WHERE user_id = ? AND quantity = 0').get(req.user.id).count;
   const val = db.prepare('SELECT SUM(quantity * price) as val FROM medications WHERE user_id = ?').get(req.user.id).val || 0;
   const totalValue = Number(val).toFixed(2);
