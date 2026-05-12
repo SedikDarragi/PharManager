@@ -34,8 +34,10 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-    const info = stmt.run(username, hashedPassword);
-    res.json({ success: true, userId: info.lastInsertRowid });
+    const info = stmt.run(username, hashedPassword); 
+    const newUser = { id: info.lastInsertRowid, username, role: 'pharmacist' }; // Assuming default role
+    const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ success: true, user: newUser, token });
   } catch (error) {
     res.status(400).json({ error: "Username already exists." });
   }

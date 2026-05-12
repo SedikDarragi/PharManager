@@ -64,9 +64,10 @@ function App() {
         const userData = { ...res.data.user, token: res.data.token };
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
-      } else {
-        setAuthMode('login');
-        setAuthError('Registration successful! Please login.');
+      } else { // Registration successful, autologin the user
+        const userData = { ...res.data.user, token: res.data.token };
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
       }
     } catch (err) {
       setAuthError(err.response?.data?.error || 'Authentication failed');
