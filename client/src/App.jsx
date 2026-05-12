@@ -27,6 +27,7 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [activeView, setActiveView] = useState('dashboard'); // New state for active view
   const [categoryData, setCategoryData] = useState([]);
   
   // State for Add Medication Modal
@@ -211,9 +212,9 @@ function App() {
           <Package /> PharmaSmart
         </h1>
         <div className="flex flex-col gap-2">
-          <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active />
-          <NavItem icon={<Package size={20} />} label="Inventory" />
-          <NavItem icon={<Bell size={20} />} label="Alerts" count={alerts.length} />
+          <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" isActive={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
+          <NavItem icon={<Package size={20} />} label="Inventory" isActive={activeView === 'inventory'} onClick={() => setActiveView('inventory')} />
+          <NavItem icon={<Bell size={20} />} label="Alerts" isActive={activeView === 'alerts'} onClick={() => setActiveView('alerts')} count={alerts.length} />
         </div>
         <div className="mt-auto border-t border-gray-800 pt-6">
           <div className="flex items-center gap-3 mb-4 text-gray-300 px-2"><User size={20} /> <span className="font-bold">{user.username}</span></div>
@@ -233,101 +234,124 @@ function App() {
           </button>
         </header>
 
-        {/* Inventory Analytics Section */}
-        <div className="mb-10">
-          <h3 className="text-2xl font-bold text-teal-400 mb-6">Inventory Analytics</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Stock Status Bar Chart */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
-            >
-              <h4 className="text-xl font-semibold mb-4">Stock Status Overview</h4>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stockStatusData}>
-                  <XAxis dataKey="name" stroke="#9CA3AF" />
-                  <YAxis stroke="#9CA3AF" />
-                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.navy}`, borderRadius: '8px' }} itemStyle={{ color: 'white' }} />
-                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                  <Bar dataKey="value">
-                    {stockStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </motion.div>
+        {activeView === 'dashboard' && (
+          <>
+            {/* Inventory Analytics Section */}
+            <div className="mb-10">
+              <h3 className="text-2xl font-bold text-teal-400 mb-6">Inventory Analytics</h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Stock Status Bar Chart */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, duration: 0.5 }}
+                  className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
+                >
+                  <h4 className="text-xl font-semibold mb-4">Stock Status Overview</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={stockStatusData}>
+                      <XAxis dataKey="name" stroke="#9CA3AF" />
+                      <YAxis stroke="#9CA3AF" />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.navy}`, borderRadius: '8px' }} itemStyle={{ color: 'white' }} />
+                      <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                      <Bar dataKey="value">
+                        {stockStatusData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </motion.div>
 
-            {/* Category Distribution Pie Chart */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
-            >
-              <h4 className="text-xl font-semibold mb-4">Medication Categories</h4>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={['#00D4AA', '#fbbf24', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'][index % 6]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.navy}`, borderRadius: '8px' }} itemStyle={{ color: 'white' }} />
-                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </motion.div>
+                {/* Category Distribution Pie Chart */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
+                >
+                  <h4 className="text-xl font-semibold mb-4">Medication Categories</h4>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#00D4AA', '#fbbf24', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'][index % 6]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.navy}`, borderRadius: '8px' }} itemStyle={{ color: 'white' }} />
+                      <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* KPI Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+              <KPICard title="Total SKUs" value={summary.totalSkus} />
+              <KPICard title="Low Stock" value={summary.lowStock} color="text-orange-400" />
+              <KPICard title="Stockouts" value={summary.stockouts} color="text-red-400" />
+              <KPICard title="Inventory Value" value={`$${summary.totalValue}`} />
+            </div>
+          </>
+        )}
+
+        {(activeView === 'dashboard' || activeView === 'inventory') && (
+          <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+            <table className="w-full text-left">
+              <thead className="bg-[#1E3A5F] text-teal-400 text-xs font-bold uppercase tracking-wider">
+                <tr>
+                  <th className="p-5">Medication Name</th>
+                  <th className="p-5">Category</th>
+                  <th className="p-5">Stock</th>
+                  <th className="p-5">Expiry</th>
+                  <th className="p-5">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800">
+                {meds.map(med => (
+                  <motion.tr
+                    whileHover={{ backgroundColor: 'rgba(30, 58, 95, 0.3)' }} // Equivalent to navy-accent with opacity
+                    key={med.id} className="group">
+                    <td className="p-5 font-semibold">{med.name}</td>
+                    <td className="p-5 text-gray-400">{med.category}</td>
+                    <td className="p-5">{med.quantity} Units</td>
+                    <td className="p-5 text-gray-300">{med.expiry_date}</td>
+                    <td className="p-5">
+                      <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} />
+                    </td>
+                  </motion.tr>
+                ))} 
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
 
-        {/* KPI Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-          <KPICard title="Total SKUs" value={summary.totalSkus} />
-          <KPICard title="Low Stock" value={summary.lowStock} color="text-orange-400" />
-          <KPICard title="Stockouts" value={summary.stockouts} color="text-red-400" />
-          <KPICard title="Inventory Value" value={`$${summary.totalValue}`} />
-        </div>
-
-        {/* Inventory Table */}
-        <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
-          <table className="w-full text-left">
-            <thead className="bg-[#1E3A5F] text-teal-400 text-xs font-bold uppercase tracking-wider">
-              <tr>
-                <th className="p-5">Medication Name</th>
-                <th className="p-5">Category</th>
-                <th className="p-5">Stock</th>
-                <th className="p-5">Expiry</th>
-                <th className="p-5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-800">
-              {meds.map(med => (
-                <motion.tr
-                  whileHover={{ backgroundColor: 'rgba(30, 58, 95, 0.3)' }} // Equivalent to navy-accent with opacity
-                  key={med.id} className="group">
-                  <td className="p-5 font-semibold">{med.name}</td>
-                  <td className="p-5 text-gray-400">{med.category}</td>
-                  <td className="p-5">{med.quantity} Units</td>
-                  <td className="p-5 text-gray-300">{med.expiry_date}</td>
-                  <td className="p-5">
-                    <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} />
-                  </td>
-                </motion.tr>
-              ))} 
-            </tbody>
-          </table>
-        </div>
+        {activeView === 'alerts' && (
+          <div className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-xl">
+            <h3 className="text-2xl font-bold text-red-400 mb-4">Active Alerts</h3>
+            {alerts.length === 0 ? (
+              <p className="text-gray-400">No active alerts at the moment. Your inventory is in good shape!</p>
+            ) : (
+              <ul className="space-y-3">
+                {alerts.map(alert => (
+                  <li key={alert.id} className="flex items-center gap-3 text-red-300">
+                    <AlertTriangle size={20} />
+                    <span>{alert.message} (Med ID: {alert.med_id})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Floating Copilot */}
@@ -457,12 +481,13 @@ function App() {
   );
 }
 
-const NavItem = ({ icon, label, active, count }) => (
+const NavItem = ({ icon, label, isActive, count, onClick }) => (
   <motion.div
     whileHover={{ scale: 1.02, x: 5 }}
     whileTap={{ scale: 0.98 }}
     transition={{ type: "spring", stiffness: 400, damping: 17 }}
-    className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer ${active ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'text-gray-400 hover:bg-gray-800/50'}`}
+    className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer ${isActive ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'text-gray-400 hover:bg-gray-800/50'}`}
+    onClick={onClick}
   >
     <div className="flex items-center gap-3">
       {icon} <span className="font-semibold">{label}</span>
