@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock } from 'lucide-react';
+import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X } from 'lucide-react';
 import axios from 'axios';
 import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -27,6 +27,7 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showWelcomeAlertsPopup, setShowWelcomeAlertsPopup] = useState(false); // State for welcome alerts popup
   const [activeView, setActiveView] = useState('dashboard'); // New state for active view
   const [categoryData, setCategoryData] = useState([]);
   
@@ -43,13 +44,28 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      fetchData();
+      const initializeDashboard = async () => {
+        await fetchData();
+        setChatHistory([{
+          role: 'assistant',
+          content: `Good morning, ${user.username}! I'm PharmaCopilot. I've synced with your live inventory. How can I help you today?`
+        }]);
+      };
+      initializeDashboard();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    // Show welcome alerts popup only once per session after alerts are fetched
+    if (user && alerts.length > 0 && !sessionStorage.getItem('hasShownWelcomeAlerts')) {
+      setShowWelcomeAlertsPopup(true);
+      sessionStorage.setItem('hasShownWelcomeAlerts', 'true');
       setChatHistory([{ 
         role: 'assistant', 
         content: `Good morning, ${user.username}! I'm PharmaCopilot. I've synced with your live inventory. How can I help you today?` 
       }]);
     }
-  }, [user]);
+  }, [alerts, user]); // Depend on alerts and user
 
   const fetchData = async () => {
     try {
@@ -143,6 +159,17 @@ function App() {
       setChatHistory(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to my brain right now." }]);
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const handleDismissAlert = async (alertId) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.post(`${API_BASE_URL}/alerts/${alertId}/dismiss`, {}, config);
+      fetchData(); // Refresh alerts after dismissing one
+    } catch (err) {
+      console.error("Error dismissing alert:", err);
+      setAuthError(err.response?.data?.error || 'Failed to dismiss alert.');
     }
   };
 
@@ -336,23 +363,67 @@ function App() {
         )}
 
         {activeView === 'alerts' && (
-          <div className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-xl">
+          <div className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-xl min-h-[200px]">
             <h3 className="text-2xl font-bold text-red-400 mb-4">Active Alerts</h3>
             {alerts.length === 0 ? (
               <p className="text-gray-400">No active alerts at the moment. Your inventory is in good shape!</p>
             ) : (
-              <ul className="space-y-3">
+              <div className="space-y-4">
                 {alerts.map(alert => (
-                  <li key={alert.id} className="flex items-center gap-3 text-red-300">
-                    <AlertTriangle size={20} />
-                    <span>{alert.message} (Med ID: {alert.med_id})</span>
-                  </li>
+                  <motion.div
+                    key={alert.id}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 50 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center justify-between p-4 bg-gray-900 border border-red-700/50 rounded-lg shadow-md"
+                  >
+                    <div className="flex items-center gap-3 text-red-300">
+                      <AlertTriangle size={20} className="text-red-500" />
+                      <span className="font-medium">{alert.message}</span>
+                    </div>
+                    <button
+                      onClick={() => handleDismissAlert(alert.id)}
+                      className="text-gray-500 hover:text-red-400 transition-colors"
+                      title="Dismiss Alert"
+                    >
+                      <X size={18} />
+                    </button>
+                  </motion.div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         )}
       </main>
+
+      {/* Welcome Alerts Notifications Stack - Top Right */}
+      <div className="fixed top-6 right-6 z-50 flex flex-col gap-3 pointer-events-none items-end">
+        <AnimatePresence>
+          {showWelcomeAlertsPopup && alerts.map((alert) => (
+            <motion.div
+              key={alert.id}
+              layout
+              initial={{ opacity: 0, x: 100, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 50, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="w-80 bg-[#161B2D]/95 backdrop-blur-md p-4 rounded-xl border border-red-900/30 shadow-2xl pointer-events-auto flex items-start gap-3"
+            >
+              <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-red-100 text-sm leading-relaxed">{alert.message}</p>
+              </div>
+              <button
+                onClick={() => handleDismissAlert(alert.id)}
+                className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Floating Copilot */}
       <motion.div
