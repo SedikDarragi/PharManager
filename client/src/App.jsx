@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X } from 'lucide-react';
+import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -41,6 +41,22 @@ function App() {
     expiry_date: '', // YYYY-MM-DD format
     price: 0,
   });
+  
+  // State for Edit Medication Modal
+  const [showEditMedicationModal, setShowEditMedicationModal] = useState(false);
+  const [editingMedication, setEditingMedication] = useState(null); // Stores the medication object being edited
+
+  // State for Delete Confirmation Modal
+  const [showDeleteConfirmationModal, setShowDeleteConfirmationModal] = useState(false);
+  const [medicationToDeleteId, setMedicationToDeleteId] = useState(null); // Stores the ID of the medication to delete
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState(''); // Text confirmation for single delete
+
+  // State for Clear Stock feature
+  const [showClearStockModal, setShowClearStockModal] = useState(false);
+  const [clearConfirmInput, setClearConfirmInput] = useState('');
+
+
+
 
   useEffect(() => {
     if (user) {
@@ -88,6 +104,11 @@ function App() {
       setSummary(summaryRes.data);
     } catch (err) {
       console.error("Fetch error:", err);
+      // If the user ID no longer exists in the DB, log them out
+      if (err.response?.status === 401) {
+        handleLogout();
+        setAuthError('Your session has expired. Please log in again.');
+      }
     }
   };
 
@@ -119,12 +140,14 @@ function App() {
   };
 
   const openAddMedicationModal = () => {
+    setAuthError(''); // Clear any previous errors
     setShowAddMedicationModal(true);
     setNewMedicationForm({ // Reset form when opening
       name: '',
       category: '',
       quantity: 0,
       reorder_threshold: 0,
+      // Ensure expiry_date is a valid string for the input type="date"
       expiry_date: '',
       price: 0,
     });
@@ -133,6 +156,31 @@ function App() {
   const closeAddMedicationModal = () => {
     setShowAddMedicationModal(false);
   };
+
+  const closeEditMedicationModal = () => {
+    setShowEditMedicationModal(false);
+    setEditingMedication(null);
+  };
+
+  const closeDeleteConfirmation = () => {
+    setMedicationToDeleteId(null);
+    setShowDeleteConfirmationModal(false);
+  };
+
+  const openEditMedicationModal = (med) => {
+    setAuthError(''); // Clear any previous errors
+    setEditingMedication({ ...med }); // Clone the medication object to avoid direct state mutation
+    setShowEditMedicationModal(true);
+  };
+
+  const openDeleteConfirmation = (medId) => {
+    setAuthError(''); // Clear any previous errors
+    setDeleteConfirmInput(''); // Reset confirmation text
+    setMedicationToDeleteId(medId);
+    setShowDeleteConfirmationModal(true);
+  };
+
+  // The handleClearStockSubmit function is correctly defined below and referenced by the form's onSubmit
 
   const handleNewMedicationChange = (e) => {
     const { name, value, type } = e.target;
@@ -163,6 +211,7 @@ function App() {
   };
 
   const handleDismissAlert = async (alertId) => {
+    setAuthError(''); // Clear any previous errors
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       await axios.post(`${API_BASE_URL}/alerts/${alertId}/dismiss`, {}, config);
@@ -175,6 +224,7 @@ function App() {
 
   const handleAddMedicationSubmit = async (e) => {
     e.preventDefault();
+    setAuthError(''); // Clear any previous errors
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       await axios.post(`${API_BASE_URL}/medications`, newMedicationForm, config);
@@ -183,6 +233,66 @@ function App() {
     } catch (err) {
       console.error("Error adding medication:", err);
       setAuthError(err.response?.data?.error || 'Failed to add medication.'); // Reusing authError for simplicity, consider a dedicated error state
+    }
+  };
+
+  const handleEditMedicationChange = (e) => {
+    const { name, value, type } = e.target;
+    setEditingMedication(prev => ({
+      ...prev,
+      [name]: type === 'number' ? Number(value) : value
+    }));
+  };
+
+  const handleUpdateMedicationSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError(''); // Clear any previous errors
+    if (!editingMedication) return;
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.put(`${API_BASE_URL}/medications/${editingMedication.id}`, editingMedication, config);
+      closeEditMedicationModal();
+      fetchData(); // Refresh data after updating
+    } catch (err) {
+      console.error("Error updating medication:", err);
+      setAuthError(err.response?.data?.error || 'Failed to update medication.');
+    }
+  };
+
+  const confirmDeleteMedication = async () => {
+    setAuthError(''); // Clear any previous errors
+    if (deleteConfirmInput !== 'delete') {
+      setAuthError('Please type "delete" to confirm.');
+      return;
+    }
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.delete(`${API_BASE_URL}/medications/${medicationToDeleteId}`, config);
+      closeDeleteConfirmation();
+      fetchData(); // Refresh data after deleting
+    } catch (err) {
+      console.error("Error deleting medication:", err);
+      setAuthError(err.response?.data?.error || 'Failed to delete medication.');
+    }
+  };
+
+  const handleClearStockSubmit = async (e) => {
+    e.preventDefault();
+    setAuthError(''); // Clear any previous errors
+    if (clearConfirmInput !== 'delete') {
+      setAuthError('Please type "delete" to confirm.');
+      return;
+    }
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.delete(`${API_BASE_URL}/medications/all/clear`, config);
+      setShowClearStockModal(false);
+      setClearConfirmInput('');
+      fetchData();
+    } catch (err) {
+      console.error("Error clearing stock:", err);
+      setAuthError('Failed to clear database.');
     }
   };
 
@@ -256,9 +366,14 @@ function App() {
             <h2 className="text-3xl font-bold">Inventory Dashboard</h2>
             <p className="text-gray-400">Welcome back, Pharmacist.</p>
           </div>
-          <button onClick={openAddMedicationModal} className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20">
-            + New Entry
-          </button>
+          <div className="flex gap-4 items-center">
+            <button onClick={() => setShowClearStockModal(true)} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-6 py-2.5 rounded-xl font-bold transition-all border border-red-500/20">
+              Clear Stock
+            </button>
+            <button onClick={openAddMedicationModal} className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20">
+              + New Entry
+            </button>
+          </div>
         </header>
 
         {activeView === 'dashboard' && (
@@ -341,6 +456,7 @@ function App() {
                   <th className="p-5">Stock</th>
                   <th className="p-5">Expiry</th>
                   <th className="p-5">Status</th>
+                <th className="p-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -355,7 +471,15 @@ function App() {
                     <td className="p-5">
                       <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} />
                     </td>
-                  </motion.tr>
+                  <td className="p-5 text-right">
+                    <button type="button" onClick={() => openEditMedicationModal(med)} className="text-gray-500 hover:text-teal-400 p-2 rounded-lg hover:bg-teal-500/10 transition-all inline-flex items-center justify-center mr-1">
+                      <Pencil size={16} />
+                    </button>
+                    <button type="button" onClick={() => openDeleteConfirmation(med.id)} className="text-gray-500 hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-all inline-flex items-center justify-center">
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </motion.tr>
                 ))} 
               </tbody>
             </table>
@@ -500,6 +624,7 @@ function App() {
               className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-lg shadow-2xl"
             >
               <h3 className="text-2xl font-bold text-teal-400 mb-6">Add New Medication</h3>
+              {authError && <p className="text-red-400 text-sm ml-1 mb-4">{authError}</p>}
               <form onSubmit={handleAddMedicationSubmit} className="space-y-4">
                 <div className="flex flex-col">
                   <label htmlFor="name" className="text-sm text-gray-400 mb-1">Name</label>
@@ -526,8 +651,6 @@ function App() {
                   <input type="number" id="price" name="price" value={newMedicationForm.price} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
                 </div>
 
-                {authError && <p className="text-red-400 text-sm ml-1">{authError}</p>}
-
                 <div className="flex justify-end gap-4 mt-6">
                   <button 
                     type="button" 
@@ -542,6 +665,146 @@ function App() {
                   >
                     Add Medication
                   </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Medication Modal */}
+      <AnimatePresence>
+        {showEditMedicationModal && editingMedication && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-lg shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-teal-400 mb-6">Modify Stock</h3>
+              {authError && <p className="text-red-400 text-sm mb-4 bg-red-400/10 p-3 rounded-lg border border-red-400/20">{authError}</p>}
+              <form onSubmit={handleUpdateMedicationSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Name</label>
+                    <input type="text" name="name" value={editingMedication.name} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Category</label>
+                    <input type="text" name="category" value={editingMedication.category} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Quantity</label>
+                    <input type="number" name="quantity" value={editingMedication.quantity} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" required />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Threshold</label>
+                    <input type="number" name="reorder_threshold" value={editingMedication.reorder_threshold} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Expiry Date</label>
+                    <input type="date" name="expiry_date" value={editingMedication.expiry_date} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Price ($)</label>
+                    <input type="number" name="price" value={editingMedication.price} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-4 pt-4">
+                  <button type="button" onClick={closeEditMedicationModal} className="px-6 py-2.5 text-gray-400 hover:text-white font-semibold">Cancel</button>
+                  <button type="submit" className="bg-teal-500 hover:bg-teal-400 text-black px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-teal-500/20 transition-all">Update Entry</button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirmationModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-md shadow-2xl text-center"
+            >
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+                <Trash2 className="text-red-500" size={32} />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Delete Medication?</h3>
+              <p className="text-gray-400 mb-6 text-sm leading-relaxed">This will permanently remove this item from your inventory. Type <span className="text-red-400 font-mono font-bold">delete</span> to confirm.</p>
+              
+              {authError && <p className="text-red-400 text-xs mb-4 bg-red-400/10 p-2 rounded border border-red-400/20">{authError}</p>}
+
+              <input 
+                type="text" 
+                value={deleteConfirmInput} 
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                placeholder='Type "delete" here'
+                className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-center mb-6 focus:outline-none focus:border-red-500 transition-all text-white"
+              />
+              <div className="flex justify-center gap-4">
+                <button type="button" onClick={closeDeleteConfirmation} className="px-5 py-2.5 text-gray-400 hover:text-white font-semibold">
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDeleteMedication} 
+                  disabled={deleteConfirmInput !== 'delete'}
+                  className={`px-8 py-2.5 rounded-xl font-bold transition-all ${deleteConfirmInput === 'delete' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>
+                  Confirm Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Clear Stock Modal */}
+      <AnimatePresence>
+        {showClearStockModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-md shadow-2xl text-center"
+            >
+              <h3 className="text-2xl font-bold text-red-400 mb-4">Wipe Database?</h3>
+              <p className="text-gray-300 mb-6">This will delete <b>EVERY</b> medication in your inventory. Type <span className="text-red-400 font-mono">delete</span> below to confirm.</p>
+              
+              <form onSubmit={handleClearStockSubmit}>
+                <input 
+                  type="text" 
+                  value={clearConfirmInput} 
+                  onChange={(e) => setClearConfirmInput(e.target.value)}
+                  placeholder='Type "delete" here'
+                  className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-center mb-4 focus:outline-none focus:border-red-500 transition-all"
+                />
+                <div className="flex justify-center gap-4">
+                  <button type="button" onClick={() => {setShowClearStockModal(false); setClearConfirmInput('');}} className="px-5 py-2.5 text-gray-400 hover:text-white transition-colors">Cancel</button>
+                  <button type="submit" disabled={clearConfirmInput !== 'delete'} className={`px-8 py-2.5 rounded-xl font-bold transition-all ${clearConfirmInput === 'delete' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}>Clear All Data</button>
                 </div>
               </form>
             </motion.div>

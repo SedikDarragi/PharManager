@@ -27,11 +27,14 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS alerts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     med_id INTEGER,
     type TEXT, -- 'LOW_STOCK', 'EXPIRY', 'STOCKOUT'
     message TEXT,
     severity TEXT, -- 'CRITICAL', 'WARNING', 'INFO'
-    status TEXT DEFAULT 'active'
+    status TEXT DEFAULT 'active',
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (med_id) REFERENCES medications (id) ON DELETE CASCADE
   );
 `);
 
@@ -43,9 +46,10 @@ const seedMeds = [
 ];
 
 // Ensure at least one user exists for seeding
-const userCount = db.prepare('SELECT count(*) as count FROM users').get();
-if (userCount.count === 0) {
-  db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('admin', 'admin123', 'admin');
+let adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+if (!adminUser) {
+  const info = db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('admin', 'admin123', 'admin');
+  adminUser = { id: info.lastInsertRowid };
 }
 
 // Run seeding...
@@ -58,7 +62,7 @@ const checkCount = db.prepare('SELECT count(*) as count FROM medications').get()
 if (checkCount.count === 0) {
   const transaction = db.transaction((meds) => {
     for (const med of meds) {
-      insertMed.run(1, med.name, med.category, med.qty, med.threshold, med.expiry, med.price);
+      insertMed.run(adminUser.id, med.name, med.category, med.qty, med.threshold, med.expiry, med.price);
     }
   });
   transaction(seedMeds);
@@ -68,25 +72,27 @@ if (checkCount.count === 0) {
 /**
  * Refresh alerts based on current medication stock and expiry dates.
  */
-function refreshAlerts() {
+function refreshAlerts(userId) {
+  if (!userId) return; // Ensure a userId is provided
+
   const performRefresh = db.transaction(() => {
-    db.prepare("DELETE FROM alerts WHERE status = 'active'").run();
-    const meds = db.prepare('SELECT * FROM medications').all();
+    db.prepare("DELETE FROM alerts WHERE user_id = ? AND status = 'active'").run(userId);
+    const meds = db.prepare('SELECT * FROM medications WHERE user_id = ?').all(userId);
     const today = new Date();
     const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const insertAlert = db.prepare('INSERT INTO alerts (med_id, type, message, severity) VALUES (?, ?, ?, ?)');
+    const insertAlert = db.prepare('INSERT INTO alerts (user_id, med_id, type, message, severity) VALUES (?, ?, ?, ?, ?)');
 
     for (const med of meds) {
       if (med.quantity <= 0) {
-        insertAlert.run(med.id, 'STOCKOUT', `${med.name} is out of stock!`, 'CRITICAL');
+        insertAlert.run(userId, med.id, 'STOCKOUT', `${med.name} is out of stock!`, 'CRITICAL');
       } else if (med.quantity <= med.reorder_threshold) {
-        insertAlert.run(med.id, 'LOW_STOCK', `${med.name} is below reorder threshold.`, 'WARNING');
+        insertAlert.run(userId, med.id, 'LOW_STOCK', `${med.name} is below reorder threshold.`, 'WARNING');
       }
       const expiryDate = new Date(med.expiry_date);
       if (expiryDate <= today) {
-        insertAlert.run(med.id, 'EXPIRY', `${med.name} has expired!`, 'CRITICAL');
+        insertAlert.run(userId, med.id, 'EXPIRY', `${med.name} has expired!`, 'CRITICAL');
       } else if (expiryDate <= thirtyDaysFromNow) {
-        insertAlert.run(med.id, 'EXPIRY', `${med.name} expires soon (${med.expiry_date}).`, 'WARNING');
+        insertAlert.run(userId, med.id, 'EXPIRY', `${med.name} expires soon (${med.expiry_date}).`, 'WARNING');
       }
     }
   });

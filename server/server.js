@@ -23,6 +23,13 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ error: "Invalid or expired token." });
+    
+    // Verify user still exists in database (handles DB resets/deletions)
+    const userExists = db.prepare('SELECT id FROM users WHERE id = ?').get(user.id);
+    if (!userExists) {
+      return res.status(401).json({ error: "User session is invalid. Please log in again." });
+    }
+
     req.user = user;
     next();
   });
@@ -80,8 +87,8 @@ app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
   const { message, history } = req.body;
 
   try {
-    // 1. Context Gathering: Fetch current state of the pharmacy
-    db.refreshAlerts();
+    // 1. Context Gathering: Fetch current state of the pharmacy for the authenticated user
+    db.refreshAlerts(req.user.id);
     const inventory = db.prepare('SELECT * FROM medications WHERE user_id = ?').all(req.user.id);
     const alerts = db.prepare("SELECT alerts.* FROM alerts JOIN medications ON alerts.med_id = medications.id WHERE medications.user_id = ? AND status = 'active'").all(req.user.id);
     const today = new Date().toISOString().split('T')[0];
@@ -147,31 +154,42 @@ app.post('/api/medications', authenticateToken, (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
   const info = stmt.run(req.user.id, name, category, quantity, reorder_threshold, expiry_date, price);
-  db.refreshAlerts();
+  db.refreshAlerts(req.user.id);
   res.json({ id: info.lastInsertRowid });
 });
 
 app.put('/api/medications/:id', authenticateToken, (req, res) => {
-  const { quantity } = req.body;
-  db.prepare('UPDATE medications SET quantity = ? WHERE id = ? AND user_id = ?').run(quantity, req.params.id, req.user.id);
-  db.refreshAlerts();
+  const { name, category, quantity, reorder_threshold, expiry_date, price } = req.body;
+  const medId = req.params.id;
+  db.prepare('UPDATE medications SET name = ?, category = ?, quantity = ?, reorder_threshold = ?, expiry_date = ?, price = ? WHERE id = ? AND user_id = ?')
+    .run(name, category, quantity, reorder_threshold, expiry_date, price, medId, req.user.id);
+  db.refreshAlerts(req.user.id);
+  res.json({ success: true });
+});
+
+// Clear All Stock Route (Must be above /:id)
+app.delete('/api/medications/all/clear', authenticateToken, (req, res) => {
+  db.prepare('DELETE FROM alerts WHERE user_id = ?').run(req.user.id);
+  db.prepare('DELETE FROM medications WHERE user_id = ?').run(req.user.id);
+  db.refreshAlerts(req.user.id);
   res.json({ success: true });
 });
 
 app.delete('/api/medications/:id', authenticateToken, (req, res) => {
+  db.prepare('DELETE FROM alerts WHERE med_id = ? AND user_id = ?').run(req.params.id, req.user.id);
   db.prepare('DELETE FROM medications WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
-  db.refreshAlerts();
+  db.refreshAlerts(req.user.id);
   res.json({ success: true });
 });
 
 app.get('/api/alerts', authenticateToken, (req, res) => {
-  db.refreshAlerts();
+  db.refreshAlerts(req.user.id);
   const alerts = db.prepare("SELECT alerts.* FROM alerts JOIN medications ON alerts.med_id = medications.id WHERE medications.user_id = ? AND status = 'active'").all(req.user.id);
   res.json(alerts);
 });
 
 app.post('/api/alerts/:id/dismiss', authenticateToken, (req, res) => {
-  db.prepare("UPDATE alerts SET status = 'dismissed' WHERE id = ? AND id IN (SELECT id FROM alerts JOIN medications ON alerts.med_id = medications.id WHERE medications.user_id = ?)").run(req.params.id, req.user.id);
+  db.prepare("UPDATE alerts SET status = 'dismissed' WHERE id = ? AND user_id = ?").run(req.params.id, req.user.id);
   res.json({ success: true });
 });
 
