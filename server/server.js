@@ -73,14 +73,20 @@ console.log("GEMINI_API_KEY loaded:", !!process.env.GEMINI_API_KEY);
   try {
     const result = await genAI.listModels();
     console.log("Available Gemini Models:");
-    result.models.forEach(m => console.log(`- ${m.name}`));
+    if (result.models) {
+      result.models.forEach(m => console.log(`- ${m.name}`));
+    }
   } catch (error) {
-    console.error("Could not list models. Check if your API Key is valid.");
+    console.error("Gemini Diagnostic Error:", error.message);
+    console.error("Please verify your GEMINI_API_KEY in the .env file.");
   }
 })();
 
 // Using gemini-1.5-flash as it's the current standard and highly available
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel(
+  { model: "gemini-1.5-flash" },
+  { apiVersion: 'v1' }
+);
 
 // THE COPILOT ENDPOINT: The Unique Differentiator
 app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
