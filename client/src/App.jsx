@@ -17,7 +17,7 @@ const API_BASE_URL = 'http://localhost:5000/api';
 function App() {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
   const [authMode, setAuthMode] = useState('login');
-  const [authForm, setAuthForm] = useState({ username: '', password: '' });
+  const [authForm, setAuthForm] = useState({ username: '', password: '', organizationName: '' });
   const [authError, setAuthError] = useState('');
 
   const [meds, setMeds] = useState([]);
@@ -329,6 +329,15 @@ function App() {
                 <input type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Enter password" required />
               </div>
             </div>
+            {authMode === 'register' && (
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Organization Name</label>
+                <div className="relative">
+                  <Package className="absolute left-3 top-3 text-gray-500" size={18} />
+                  <input type="text" value={authForm.organizationName} onChange={e => setAuthForm({...authForm, organizationName: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Pharmacy Name" required />
+                </div>
+              </div>
+            )}
             {authError && <p className="text-red-400 text-sm ml-1">{authError}</p>}
             <button className="w-full bg-teal-500 hover:bg-teal-400 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-teal-500/20">
               {authMode === 'login' ? 'Sign In' : 'Create Account'}
@@ -362,7 +371,9 @@ function App() {
           <NavItem icon={<Bell size={20} />} label="Alerts" isActive={activeView === 'alerts'} onClick={() => setActiveView('alerts')} count={alerts.length} />
         </div>
         <div className="mt-auto border-t border-gray-800 pt-6">
-          <div className="flex items-center gap-3 mb-4 text-gray-300 px-2"><User size={20} /> <span className="font-bold">{user.username}</span></div>
+          <button onClick={() => setActiveView('profile')} className={`flex items-center gap-3 mb-4 w-full px-2 py-2 rounded-xl transition-all ${activeView === 'profile' ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20' : 'text-gray-300 hover:text-teal-400'}`}>
+            <User size={20} /> <span className="font-bold">{user.username}</span>
+          </button>
           <button onClick={handleLogout} className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors px-2 font-semibold"><LogOut size={20} /> Logout</button>
         </div>
       </nav>
@@ -526,6 +537,42 @@ function App() {
               </div>
             )}
           </div>
+        )}
+
+        {activeView === 'profile' && (
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="max-w-2xl"
+          >
+            <div className="bg-[#161B2D] p-10 rounded-3xl border border-gray-800 shadow-2xl">
+              <div className="flex items-center gap-6 mb-10">
+                <div className="w-20 h-20 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 text-teal-400">
+                  <User size={40} />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-bold text-white">{user.username}</h3>
+                  <p className="text-gray-400 capitalize">{user.role || 'Pharmacist'}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Organization Context</label>
+                    <div className="flex items-center gap-2 text-gray-300">
+                      <Package size={18} className="text-teal-500" />
+                      <span className="font-semibold">Linked Org ID: #{user.orgId}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-6 bg-teal-500/5 border border-teal-500/10 rounded-2xl">
+                   <p className="text-gray-400 text-sm leading-relaxed">You are currently viewing data for your entire organization. All stock updates and alerts are synchronized across all members of your group.</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
         )}
       </main>
 

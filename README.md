@@ -5,6 +5,7 @@ PharManage is a modern, full-stack inventory management system designed specific
 ## Features
 
 - **Inventory Management**: Complete CRUD operations for medications including tracking by category, quantity, price, and expiry date.
+- **Multi-tenant Organizations**: Users are associated with organizations upon signup. Stock data is shared and synced across all users within the same organization.
 - **AI Pharmacist Copilot**: Built-in assistant powered by Google Gemini 1.5 Flash that analyzes live inventory data to answer queries and provide proactive suggestions.
 - **Analytics Dashboard**: Visual representations of stock status (Healthy, Low Stock, Stockout) and category distribution using interactive charts.
 - **Smart Alerting**: Persistent notifications for stock levels falling to 5 units or lower and upcoming/past medication expiries.
@@ -61,10 +62,10 @@ PharManage is a modern, full-stack inventory management system designed specific
 
 ## Running the Application
 
-### 1. Start the Backend Server
-From the `server` directory:
+For development, you can run both the client and server simultaneously from the project root directory:
+
 ```bash
-node server.js
+npm run dev
 ```
 The server will start on `http://localhost:5000`. It will automatically initialize the SQLite database (`pharmacy.db`) and seed initial data if needed.
 

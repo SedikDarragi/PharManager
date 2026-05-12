@@ -37,13 +37,26 @@ const authenticateToken = (req, res, next) => {
 
 // Auth Routes
 app.post('/api/auth/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, organizationName } = req.body;
   try {
+    // Find or create organization
+    let org = db.prepare('SELECT id FROM organizations WHERE name = ?').get(organizationName);
+    if (!org) {
+      const orgInfo = db.prepare('INSERT INTO organizations (name) VALUES (?)').run(organizationName);
+      org = { id: orgInfo.lastInsertRowid };
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-    const info = stmt.run(username, hashedPassword); 
-    const newUser = { id: info.lastInsertRowid, username, role: 'pharmacist' }; // Assuming default role
-    const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: '24h' });
+    const stmt = db.prepare('INSERT INTO users (username, password, org_id) VALUES (?, ?, ?)');
+    const info = stmt.run(username, hashedPassword, org.id); 
+    
+    const newUser = { id: info.lastInsertRowid, username, orgId: org.id, role: 'pharmacist' };
+    const token = jwt.sign({ 
+      id: newUser.id, 
+      username: newUser.username, 
+      orgId: newUser.orgId 
+    }, JWT_SECRET, { expiresIn: '24h' });
+
     res.json({ success: true, user: newUser, token });
   } catch (error) {
     res.status(400).json({ error: "Username already exists." });
@@ -58,8 +71,13 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(400).json({ error: "Invalid username or password." });
   }
 
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
-  res.json({ token, user: { id: user.id, username: user.username } });
+  const token = jwt.sign({ 
+    id: user.id, 
+    username: user.username, 
+    orgId: user.org_id 
+  }, JWT_SECRET, { expiresIn: '24h' });
+
+  res.json({ token, user: { id: user.id, username: user.username, orgId: user.org_id } });
 });
 
 // Initialize Google Generative AI
@@ -94,9 +112,9 @@ app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
 
   try {
     // 1. Context Gathering: Fetch current state of the pharmacy for the authenticated user
-    db.refreshAlerts(req.user.id);
-    const inventory = db.prepare('SELECT * FROM medications WHERE user_id = ?').all(req.user.id);
-    const alerts = db.prepare("SELECT * FROM alerts WHERE user_id = ? AND status = 'active'").all(req.user.id);
+    db.refreshAlerts(req.user.orgId);
+    const inventory = db.prepare('SELECT * FROM medications WHERE org_id = ?').all(req.user.orgId);
+    const alerts = db.prepare("SELECT * FROM alerts WHERE org_id = ? AND status = 'active'").all(req.user.orgId);
     const today = new Date().toISOString().split('T')[0];
 
     // 2. Build the System Prompt
@@ -149,61 +167,61 @@ app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
 
 // Inventory Routes
 app.get('/api/medications', authenticateToken, (req, res) => {
-  const meds = db.prepare('SELECT * FROM medications WHERE user_id = ?').all(req.user.id);
+  const meds = db.prepare('SELECT * FROM medications WHERE org_id = ?').all(req.user.orgId);
   res.json(meds);
 });
 
 app.post('/api/medications', authenticateToken, (req, res) => {
   const { name, category, quantity, reorder_threshold, expiry_date, price } = req.body;
   const stmt = db.prepare(`
-    INSERT INTO medications (user_id, name, category, quantity, reorder_threshold, expiry_date, price)
+    INSERT INTO medications (org_id, name, category, quantity, reorder_threshold, expiry_date, price)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  const info = stmt.run(req.user.id, name, category, quantity, reorder_threshold, expiry_date, price);
-  db.refreshAlerts(req.user.id);
+  const info = stmt.run(req.user.orgId, name, category, quantity, reorder_threshold, expiry_date, price);
+  db.refreshAlerts(req.user.orgId);
   res.json({ id: info.lastInsertRowid });
 });
 
 app.put('/api/medications/:id', authenticateToken, (req, res) => {
   const { name, category, quantity, reorder_threshold, expiry_date, price } = req.body;
   const medId = req.params.id;
-  db.prepare('UPDATE medications SET name = ?, category = ?, quantity = ?, reorder_threshold = ?, expiry_date = ?, price = ? WHERE id = ? AND user_id = ?')
-    .run(name, category, quantity, reorder_threshold, expiry_date, price, medId, req.user.id);
-  db.refreshAlerts(req.user.id);
+  db.prepare('UPDATE medications SET name = ?, category = ?, quantity = ?, reorder_threshold = ?, expiry_date = ?, price = ? WHERE id = ? AND org_id = ?')
+    .run(name, category, quantity, reorder_threshold, expiry_date, price, medId, req.user.orgId);
+  db.refreshAlerts(req.user.orgId);
   res.json({ success: true });
 });
 
 // Clear All Stock Route (Must be above /:id)
 app.delete('/api/medications/all/clear', authenticateToken, (req, res) => {
-  db.prepare('DELETE FROM alerts WHERE user_id = ?').run(req.user.id);
-  db.prepare('DELETE FROM medications WHERE user_id = ?').run(req.user.id);
-  db.refreshAlerts(req.user.id);
+  db.prepare('DELETE FROM alerts WHERE org_id = ?').run(req.user.orgId);
+  db.prepare('DELETE FROM medications WHERE org_id = ?').run(req.user.orgId);
+  db.refreshAlerts(req.user.orgId);
   res.json({ success: true });
 });
 
 app.delete('/api/medications/:id', authenticateToken, (req, res) => {
-  db.prepare('DELETE FROM alerts WHERE med_id = ? AND user_id = ?').run(req.params.id, req.user.id);
-  db.prepare('DELETE FROM medications WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
-  db.refreshAlerts(req.user.id);
+  db.prepare('DELETE FROM alerts WHERE med_id = ? AND org_id = ?').run(req.params.id, req.user.orgId);
+  db.prepare('DELETE FROM medications WHERE id = ? AND org_id = ?').run(req.params.id, req.user.orgId);
+  db.refreshAlerts(req.user.orgId);
   res.json({ success: true });
 });
 
 app.get('/api/alerts', authenticateToken, (req, res) => {
-  db.refreshAlerts(req.user.id);
-  const alerts = db.prepare("SELECT * FROM alerts WHERE user_id = ? AND status = 'active'").all(req.user.id);
+  db.refreshAlerts(req.user.orgId);
+  const alerts = db.prepare("SELECT * FROM alerts WHERE org_id = ? AND status = 'active'").all(req.user.orgId);
   res.json(alerts);
 });
 
 app.post('/api/alerts/:id/dismiss', authenticateToken, (req, res) => {
-  db.prepare("UPDATE alerts SET status = 'dismissed' WHERE id = ? AND user_id = ?").run(req.params.id, req.user.id);
+  db.prepare("UPDATE alerts SET status = 'dismissed' WHERE id = ? AND org_id = ?").run(req.params.id, req.user.orgId);
   res.json({ success: true });
 });
 
 app.get('/api/analytics/summary', authenticateToken, (req, res) => {
-  const totalSkus = db.prepare('SELECT COUNT(*) as count FROM medications WHERE user_id = ?').get(req.user.id).count;
-  const lowStock = db.prepare('SELECT COUNT(*) as count FROM medications WHERE user_id = ? AND quantity <= 5 AND quantity > 0').get(req.user.id).count;
-  const stockouts = db.prepare('SELECT COUNT(*) as count FROM medications WHERE user_id = ? AND quantity = 0').get(req.user.id).count;
-  const val = db.prepare('SELECT SUM(quantity * price) as val FROM medications WHERE user_id = ?').get(req.user.id).val || 0;
+  const totalSkus = db.prepare('SELECT COUNT(*) as count FROM medications WHERE org_id = ?').get(req.user.orgId).count;
+  const lowStock = db.prepare('SELECT COUNT(*) as count FROM medications WHERE org_id = ? AND quantity <= 5 AND quantity > 0').get(req.user.orgId).count;
+  const stockouts = db.prepare('SELECT COUNT(*) as count FROM medications WHERE org_id = ? AND quantity = 0').get(req.user.orgId).count;
+  const val = db.prepare('SELECT SUM(quantity * price) as val FROM medications WHERE org_id = ?').get(req.user.orgId).val || 0;
   const totalValue = Number(val).toFixed(2);
   
   res.json({ totalSkus, lowStock, stockouts, totalValue });
