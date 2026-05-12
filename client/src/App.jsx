@@ -237,7 +237,9 @@ function App() {
             </thead>
             <tbody className="divide-y divide-gray-800">
               {meds.map(med => (
-                <tr key={med.id} className="hover:bg-gray-800/30 transition-colors group">
+                <motion.tr
+                  whileHover={{ backgroundColor: 'rgba(30, 58, 95, 0.3)' }} // Equivalent to navy-accent with opacity
+                  key={med.id} className="group">
                   <td className="p-5 font-semibold">{med.name}</td>
                   <td className="p-5 text-gray-400">{med.category}</td>
                   <td className="p-5">{med.quantity} Units</td>
@@ -246,14 +248,21 @@ function App() {
                     <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} />
                   </td>
                 </tr>
-              ))}
+              ))} 
             </tbody>
           </table>
         </div>
       </main>
 
       {/* Floating Copilot */}
-      <div className={`fixed bottom-6 right-6 w-[400px] z-50 transition-all duration-500 transform ${isChatOpen ? 'translate-y-0' : 'translate-y-[calc(100%-60px)]'}`}>
+      <motion.div
+        // Framer Motion will handle the animation based on isChatOpen state
+        initial={false} // Prevents initial animation on mount
+        animate={{ y: isChatOpen ? 0 : 'calc(100% - 60px)' }}
+        transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+        // Remove Tailwind's transition classes as Framer Motion handles it
+        className="fixed bottom-6 right-6 w-[400px] z-50"
+      >
         <div 
           className="bg-teal-500 rounded-t-2xl p-4 flex justify-between items-center cursor-pointer shadow-2xl"
           onClick={() => setIsChatOpen(!isChatOpen)}
@@ -264,7 +273,7 @@ function App() {
           </div>
           <div className="h-2 w-2 rounded-full bg-black animate-pulse" />
         </div>
-        <div className="bg-[#161B2D] h-[500px] border-x border-b border-gray-800 flex flex-col p-4 shadow-2xl">
+        <div className="bg-[#161B2D] h-[500px] border-x border-b border-gray-800 flex flex-col p-4 shadow-2xl overflow-hidden"> {/* Added overflow-hidden */}
           <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar">
             {chatHistory.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -300,78 +309,101 @@ function App() {
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Add Medication Modal */}
-      {showAddMedicationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-lg shadow-2xl">
-            <h3 className="text-2xl font-bold text-teal-400 mb-6">Add New Medication</h3>
-            <form onSubmit={handleAddMedicationSubmit} className="space-y-4">
-              <div className="flex flex-col">
-                <label htmlFor="name" className="text-sm text-gray-400 mb-1">Name</label>
-                <input type="text" id="name" name="name" value={newMedicationForm.name} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
-              </div>
-              <div className="flex flex-col">
-                <label htmlFor="category" className="text-sm text-gray-400 mb-1">Category</label>
-                <input type="text" id="category" name="category" value={newMedicationForm.category} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
-              </div>
-              <div className="flex flex-col">
-                <label htmlFor="quantity" className="text-sm text-gray-400 mb-1">Quantity</label>
-                <input type="number" id="quantity" name="quantity" value={newMedicationForm.quantity} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
-              </div>
-              <div className="flex flex-col">
-                <label htmlFor="reorder_threshold" className="text-sm text-gray-400 mb-1">Reorder Threshold</label>
-                <input type="number" id="reorder_threshold" name="reorder_threshold" value={newMedicationForm.reorder_threshold} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
-              </div>
-              <div className="flex flex-col">
-                <label htmlFor="expiry_date" className="text-sm text-gray-400 mb-1">Expiry Date</label>
-                <input type="date" id="expiry_date" name="expiry_date" value={newMedicationForm.expiry_date} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
-              </div>
-              <div className="flex flex-col">
-                <label htmlFor="price" className="text-sm text-gray-400 mb-1">Price</label>
-                <input type="number" id="price" name="price" value={newMedicationForm.price} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
-              </div>
+      <AnimatePresence>
+        {showAddMedicationModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ y: -50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -50, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-lg shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-teal-400 mb-6">Add New Medication</h3>
+              <form onSubmit={handleAddMedicationSubmit} className="space-y-4">
+                <div className="flex flex-col">
+                  <label htmlFor="name" className="text-sm text-gray-400 mb-1">Name</label>
+                  <input type="text" id="name" name="name" value={newMedicationForm.name} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                </div>
+                <div className="flex flex-col">
+                  <label htmlFor="category" className="text-sm text-gray-400 mb-1">Category</label>
+                  <input type="text" id="category" name="category" value={newMedicationForm.category} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                </div>
+                <div className="flex flex-col">
+                  <label htmlFor="quantity" className="text-sm text-gray-400 mb-1">Quantity</label>
+                  <input type="number" id="quantity" name="quantity" value={newMedicationForm.quantity} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
+                </div>
+                <div className="flex flex-col">
+                  <label htmlFor="reorder_threshold" className="text-sm text-gray-400 mb-1">Reorder Threshold</label>
+                  <input type="number" id="reorder_threshold" name="reorder_threshold" value={newMedicationForm.reorder_threshold} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
+                </div>
+                <div className="flex flex-col">
+                  <label htmlFor="expiry_date" className="text-sm text-gray-400 mb-1">Expiry Date</label>
+                  <input type="date" id="expiry_date" name="expiry_date" value={newMedicationForm.expiry_date} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                </div>
+                <div className="flex flex-col">
+                  <label htmlFor="price" className="text-sm text-gray-400 mb-1">Price</label>
+                  <input type="number" id="price" name="price" value={newMedicationForm.price} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
+                </div>
 
-              {authError && <p className="text-red-400 text-sm ml-1">{authError}</p>}
+                {authError && <p className="text-red-400 text-sm ml-1">{authError}</p>}
 
-              <div className="flex justify-end gap-4 mt-6">
-                <button 
-                  type="button" 
-                  onClick={closeAddMedicationModal} 
-                  className="px-5 py-2.5 rounded-xl text-gray-300 hover:bg-gray-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="bg-teal-500 hover:bg-teal-400 text-black px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
-                >
-                  Add Medication
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                <div className="flex justify-end gap-4 mt-6">
+                  <button 
+                    type="button" 
+                    onClick={closeAddMedicationModal} 
+                    className="px-5 py-2.5 rounded-xl text-gray-300 hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="bg-teal-500 hover:bg-teal-400 text-black px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
+                  >
+                    Add Medication
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 const NavItem = ({ icon, label, active, count }) => (
-  <div className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all ${active ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'text-gray-400 hover:bg-gray-800/50'}`}>
+  <motion.div
+    whileHover={{ scale: 1.02, x: 5 }}
+    whileTap={{ scale: 0.98 }}
+    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer ${active ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'text-gray-400 hover:bg-gray-800/50'}`}
+  >
     <div className="flex items-center gap-3">
       {icon} <span className="font-semibold">{label}</span>
     </div>
     {count > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{count}</span>}
-  </div>
+  </motion.div>
 );
 
 const KPICard = ({ title, value, color = "text-white" }) => (
-  <div className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg hover:border-gray-700 transition-all">
+  <motion.div
+    whileHover={{ scale: 1.03 }}
+    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg hover:border-gray-700"
+  >
     <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">{title}</p>
     <p className={`text-3xl font-bold ${color}`}>{value}</p>
-  </div>
+  </motion.div>
 );
 
 const StatusBadge = ({ qty, threshold }) => {
