@@ -1,6 +1,6 @@
-# PharmaSmart - AI-Powered Pharmacy Inventory Management
+# PharManage - AI-Powered Pharmacy Inventory Management
 
-PharmaSmart is a modern, full-stack inventory management system designed specifically for pharmacies. It features a real-time dashboard, automated alerting for low stock and expiration dates, and an integrated AI Copilot to assist pharmacists with clinical and inventory insights.
+PharManage is a modern, full-stack inventory management system designed specifically for pharmacies. It features a real-time dashboard, automated alerting for low stock and expiration dates, and an integrated AI Copilot to assist pharmacists with clinical and inventory insights.
 
 ## Features
 
