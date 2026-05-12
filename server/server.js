@@ -227,4 +227,15 @@ app.get('/api/analytics/summary', authenticateToken, (req, res) => {
   res.json({ totalSkus, lowStock, stockouts, totalValue });
 });
 
+// Organization & Profile Routes
+app.get('/api/organization/details', authenticateToken, (req, res) => {
+  const org = db.prepare('SELECT * FROM organizations WHERE id = ?').get(req.user.orgId);
+  res.json(org);
+});
+
+app.get('/api/organization/members', authenticateToken, (req, res) => {
+  const members = db.prepare('SELECT id, username, role, created_at FROM users WHERE org_id = ?').all(req.user.orgId);
+  res.json(members);
+});
+
 app.listen(5000, () => console.log('Backend running on port 5000'));

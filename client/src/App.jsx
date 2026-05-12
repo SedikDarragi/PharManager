@@ -28,6 +28,10 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showWelcomeAlertsPopup, setShowWelcomeAlertsPopup] = useState(false); // State for welcome alerts popup
+
+  // Profile & Settings State
+  const [orgDetails, setOrgDetails] = useState(null);
+  const [orgMembers, setOrgMembers] = useState([]);
   const [activeView, setActiveView] = useState('dashboard'); // New state for active view
   const [categoryData, setCategoryData] = useState([]);
   
@@ -119,6 +123,26 @@ function App() {
       }
     }
   };
+
+  const fetchProfileData = async () => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const [orgRes, membersRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/organization/details`, config),
+        axios.get(`${API_BASE_URL}/organization/members`, config)
+      ]);
+      setOrgDetails(orgRes.data);
+      setOrgMembers(membersRes.data);
+    } catch (err) {
+      console.error("Profile fetch error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'profile' && user) {
+      fetchProfileData();
+    }
+  }, [activeView, user]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -359,9 +383,9 @@ function App() {
   ];
 
   return (
-    <div className="min-h-screen flex text-white font-sans" style={{ backgroundColor: COLORS.bg }}>
+    <div className="h-screen flex text-white font-sans overflow-hidden" style={{ backgroundColor: COLORS.bg }}>
       {/* Sidebar */}
-      <nav className="w-64 border-r border-gray-800 p-6 flex flex-col gap-8">
+      <nav className="w-64 border-r border-gray-800 p-6 flex flex-col gap-8 shrink-0 overflow-y-auto">
         <h1 className="text-2xl font-bold text-teal-400 flex items-center gap-2">
           <Package /> PharmaSmart
         </h1>
@@ -541,35 +565,84 @@ function App() {
 
         {activeView === 'profile' && (
           <motion.div 
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, x: 0 }}
-            className="max-w-2xl"
+            className="max-w-4xl space-y-6"
           >
-            <div className="bg-[#161B2D] p-10 rounded-3xl border border-gray-800 shadow-2xl">
-              <div className="flex items-center gap-6 mb-10">
-                <div className="w-20 h-20 bg-teal-500/10 rounded-2xl flex items-center justify-center border border-teal-500/20 text-teal-400">
-                  <User size={40} />
-                </div>
-                <div>
-                  <h3 className="text-3xl font-bold text-white">{user.username}</h3>
-                  <p className="text-gray-400 capitalize">{user.role || 'Pharmacist'}</p>
+            {/* Header Section */}
+            <div className="bg-[#161B2D] p-8 rounded-3xl border border-gray-800 shadow-xl flex flex-col md:flex-row items-center gap-8">
+              <div className="w-24 h-24 bg-teal-500/10 rounded-full flex items-center justify-center border-2 border-teal-500/20 text-teal-400 shadow-inner">
+                <User size={48} />
+              </div>
+              <div className="text-center md:text-left flex-1">
+                <h3 className="text-3xl font-bold text-white mb-1">{user.username}</h3>
+                <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                  <span className="px-3 py-1 bg-teal-500/10 text-teal-400 rounded-lg text-xs font-bold uppercase border border-teal-500/20">{user.role || 'Pharmacist'}</span>
+                  <span className="px-3 py-1 bg-gray-800 text-gray-400 rounded-lg text-xs font-bold uppercase border border-gray-700">ID: {user.id}</span>
                 </div>
               </div>
-              
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-900/50 p-6 rounded-2xl border border-gray-800">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Organization Context</label>
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <Package size={18} className="text-teal-500" />
-                      <span className="font-semibold">Linked Org ID: #{user.orgId}</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Organization & Security */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Organization Details */}
+                <section className="bg-[#161B2D] p-8 rounded-3xl border border-gray-800 shadow-lg">
+                  <h4 className="text-lg font-bold text-teal-400 mb-6 flex items-center gap-2">
+                    <Package size={20} /> Organization Management
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-800 flex justify-between items-center">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Clinic / Pharmacy Name</label>
+                        <p className="text-white font-semibold">{orgDetails?.name || 'Loading...'}</p>
+                      </div>
+                      <button className="text-xs text-teal-400 hover:underline">Edit</button>
+                    </div>
+                    <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-800">
+                      <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Global Data Policy</label>
+                      <p className="text-gray-400 text-sm">Inventory and alerts are shared in real-time with all members of this organization.</p>
                     </div>
                   </div>
-                </div>
-                
-                <div className="p-6 bg-teal-500/5 border border-teal-500/10 rounded-2xl">
-                   <p className="text-gray-400 text-sm leading-relaxed">You are currently viewing data for your entire organization. All stock updates and alerts are synchronized across all members of your group.</p>
-                </div>
+                </section>
+
+                {/* Security */}
+                <section className="bg-[#161B2D] p-8 rounded-3xl border border-gray-800 shadow-lg">
+                  <h4 className="text-lg font-bold text-red-400 mb-6 flex items-center gap-2">
+                    <Lock size={20} /> Account Security
+                  </h4>
+                  <div className="space-y-4">
+                    <button className="w-full text-left p-4 bg-gray-900/50 rounded-2xl border border-gray-800 hover:border-red-500/30 transition-all flex justify-between items-center group">
+                      <div>
+                        <p className="text-white font-semibold group-hover:text-red-400 transition-colors">Change Password</p>
+                        <p className="text-gray-500 text-xs">Update your login credentials</p>
+                      </div>
+                      <Lock size={16} className="text-gray-600" />
+                    </button>
+                  </div>
+                </section>
+              </div>
+
+              {/* Right Column: Team Members */}
+              <div className="space-y-6">
+                <section className="bg-[#161B2D] p-8 rounded-3xl border border-gray-800 shadow-lg">
+                  <h4 className="text-lg font-bold text-teal-400 mb-6 flex items-center gap-2">
+                    <User size={20} /> Team Members
+                  </h4>
+                  <div className="space-y-3">
+                    {orgMembers.map(member => (
+                      <div key={member.id} className="flex items-center gap-3 p-3 bg-gray-900/30 rounded-xl border border-gray-800">
+                        <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-teal-400 font-bold text-xs uppercase">
+                          {member.username[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white">{member.username}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-tighter">{member.role}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
             </div>
           </motion.div>
