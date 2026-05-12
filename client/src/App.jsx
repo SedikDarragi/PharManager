@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock } from 'lucide-react';
 import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import './index.css'; // Import the main CSS file here
@@ -14,6 +14,11 @@ const COLORS = {
 const API_BASE_URL = 'http://localhost:5000/api';
 
 function App() {
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+  const [authMode, setAuthMode] = useState('login');
+  const [authForm, setAuthForm] = useState({ username: '', password: '' });
+  const [authError, setAuthError] = useState('');
+
   const [meds, setMeds] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [summary, setSummary] = useState({ totalSkus: 0, lowStock: 0, stockouts: 0, totalValue: 0 });
@@ -23,19 +28,22 @@ function App() {
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    fetchData();
-    setChatHistory([{ 
-      role: 'assistant', 
-      content: "Good morning! I'm PharmaCopilot. I've synced with your live inventory. How can I help you optimize your stock today?" 
-    }]);
-  }, []);
+    if (user) {
+      fetchData();
+      setChatHistory([{ 
+        role: 'assistant', 
+        content: `Good morning, ${user.username}! I'm PharmaCopilot. I've synced with your live inventory. How can I help you today?` 
+      }]);
+    }
+  }, [user]);
 
   const fetchData = async () => {
     try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
       const [medsRes, alertsRes, summaryRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/medications`),
-        axios.get(`${API_BASE_URL}/alerts`),
-        axios.get(`${API_BASE_URL}/analytics/summary`)
+        axios.get(`${API_BASE_URL}/medications`, config),
+        axios.get(`${API_BASE_URL}/alerts`, config),
+        axios.get(`${API_BASE_URL}/analytics/summary`, config)
       ]);
       setMeds(medsRes.data);
       setAlerts(alertsRes.data);
@@ -43,6 +51,32 @@ function App() {
     } catch (err) {
       console.error("Fetch error:", err);
     }
+  };
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      const url = authMode === 'login' ? '/auth/login' : '/auth/register';
+      const res = await axios.post(`${API_BASE_URL}${url}`, authForm);
+      
+      if (authMode === 'login') {
+        const userData = { ...res.data.user, token: res.data.token };
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+      } else {
+        setAuthMode('login');
+        setAuthError('Registration successful! Please login.');
+      }
+    } catch (err) {
+      setAuthError(err.response?.data?.error || 'Authentication failed');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    setChatHistory([]);
   };
 
   const handleChat = async () => {
@@ -56,7 +90,7 @@ function App() {
       const res = await axios.post(`${API_BASE_URL}/copilot/chat`, {
         message: chatInput,
         history: chatHistory
-      });
+      }, { headers: { Authorization: `Bearer ${user.token}` } });
       setChatHistory(prev => [...prev, { role: 'assistant', content: res.data.reply }]);
     } catch (err) {
       setChatHistory(prev => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to my brain right now." }]);
@@ -64,6 +98,44 @@ function App() {
       setIsTyping(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: COLORS.bg }}>
+        <div className="bg-[#161B2D] p-8 rounded-3xl border border-gray-800 w-full max-w-md shadow-2xl">
+          <h1 className="text-3xl font-bold text-teal-400 mb-2 flex items-center gap-2">
+            <Package /> PharmaSmart
+          </h1>
+          <p className="text-gray-400 mb-8">{authMode === 'login' ? 'Login to manage inventory' : 'Create an account to get started'}</p>
+          
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Username</label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 text-gray-500" size={18} />
+                <input type="text" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Enter username" required />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 text-gray-500" size={18} />
+                <input type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Enter password" required />
+              </div>
+            </div>
+            {authError && <p className="text-red-400 text-sm ml-1">{authError}</p>}
+            <button className="w-full bg-teal-500 hover:bg-teal-400 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-teal-500/20">
+              {authMode === 'login' ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
+          
+          <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full mt-6 text-sm text-gray-400 hover:text-teal-400 transition-colors">
+            {authMode === 'login' ? "Don't have an account? Register" : "Already have an account? Login"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex text-white font-sans" style={{ backgroundColor: COLORS.bg }}>
@@ -76,6 +148,10 @@ function App() {
           <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active />
           <NavItem icon={<Package size={20} />} label="Inventory" />
           <NavItem icon={<Bell size={20} />} label="Alerts" count={alerts.length} />
+        </div>
+        <div className="mt-auto border-t border-gray-800 pt-6">
+          <div className="flex items-center gap-3 mb-4 text-gray-300 px-2"><User size={20} /> <span className="font-bold">{user.username}</span></div>
+          <button onClick={handleLogout} className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors px-2 font-semibold"><LogOut size={20} /> Logout</button>
         </div>
       </nav>
 
