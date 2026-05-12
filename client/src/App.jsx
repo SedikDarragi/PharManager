@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock } from 'lucide-react';
 import axios from 'axios';
+import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
 import './index.css'; // Import the main CSS file here
 
@@ -26,6 +27,7 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [categoryData, setCategoryData] = useState([]);
   
   // State for Add Medication Modal
   const [showAddMedicationModal, setShowAddMedicationModal] = useState(false);
@@ -58,6 +60,14 @@ function App() {
       ]);
       setMeds(medsRes.data);
       setAlerts(alertsRes.data);
+
+      // Prepare data for Category Distribution Pie Chart
+      const categoryCounts = medsRes.data.reduce((acc, med) => {
+        acc[med.category] = (acc[med.category] || 0) + 1;
+        return acc;
+      }, {});
+      setCategoryData(Object.entries(categoryCounts).map(([category, count]) => ({ name: category, value: count })));
+
       setSummary(summaryRes.data);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -187,6 +197,12 @@ function App() {
     );
   }
 
+  const stockStatusData = [
+    { name: 'Low Stock', value: summary.lowStock, color: '#fbbf24' },
+    { name: 'Stockouts', value: summary.stockouts, color: '#ef4444' },
+    { name: 'Healthy', value: Math.max(0, summary.totalSkus - summary.lowStock - summary.stockouts), color: '#00D4AA' }
+  ];
+
   return (
     <div className="min-h-screen flex text-white font-sans" style={{ backgroundColor: COLORS.bg }}>
       {/* Sidebar */}
@@ -217,6 +233,65 @@ function App() {
           </button>
         </header>
 
+        {/* Inventory Analytics Section */}
+        <div className="mb-10">
+          <h3 className="text-2xl font-bold text-teal-400 mb-6">Inventory Analytics</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Stock Status Bar Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
+            >
+              <h4 className="text-xl font-semibold mb-4">Stock Status Overview</h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={stockStatusData}>
+                  <XAxis dataKey="name" stroke="#9CA3AF" />
+                  <YAxis stroke="#9CA3AF" />
+                  <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.navy}`, borderRadius: '8px' }} itemStyle={{ color: 'white' }} />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                  <Bar dataKey="value">
+                    {stockStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </motion.div>
+
+            {/* Category Distribution Pie Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
+            >
+              <h4 className="text-xl font-semibold mb-4">Medication Categories</h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={['#00D4AA', '#fbbf24', '#ef4444', '#3b82f6', '#8b5cf6', '#ec4899'][index % 6]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: COLORS.card, border: `1px solid ${COLORS.navy}`, borderRadius: '8px' }} itemStyle={{ color: 'white' }} />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* KPI Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           <KPICard title="Total SKUs" value={summary.totalSkus} />
           <KPICard title="Low Stock" value={summary.lowStock} color="text-orange-400" />
@@ -224,6 +299,7 @@ function App() {
           <KPICard title="Inventory Value" value={`$${summary.totalValue}`} />
         </div>
 
+        {/* Inventory Table */}
         <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
           <table className="w-full text-left">
             <thead className="bg-[#1E3A5F] text-teal-400 text-xs font-bold uppercase tracking-wider">
@@ -247,7 +323,7 @@ function App() {
                   <td className="p-5">
                     <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} />
                   </td>
-                </tr>
+                </motion.tr>
               ))} 
             </tbody>
           </table>
