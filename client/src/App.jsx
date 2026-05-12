@@ -26,6 +26,17 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  
+  // State for Add Medication Modal
+  const [showAddMedicationModal, setShowAddMedicationModal] = useState(false);
+  const [newMedicationForm, setNewMedicationForm] = useState({
+    name: '',
+    category: '',
+    quantity: 0,
+    reorder_threshold: 0,
+    expiry_date: '', // YYYY-MM-DD format
+    price: 0,
+  });
 
   useEffect(() => {
     if (user) {
@@ -80,6 +91,30 @@ function App() {
     setChatHistory([]);
   };
 
+  const openAddMedicationModal = () => {
+    setShowAddMedicationModal(true);
+    setNewMedicationForm({ // Reset form when opening
+      name: '',
+      category: '',
+      quantity: 0,
+      reorder_threshold: 0,
+      expiry_date: '',
+      price: 0,
+    });
+  };
+
+  const closeAddMedicationModal = () => {
+    setShowAddMedicationModal(false);
+  };
+
+  const handleNewMedicationChange = (e) => {
+    const { name, value, type } = e.target;
+    setNewMedicationForm(prev => ({
+      ...prev,
+      [name]: type === 'number' ? Number(value) : value
+    }));
+  };
+
   const handleChat = async () => {
     if (!chatInput.trim()) return;
     const userMsg = { role: 'user', content: chatInput };
@@ -99,6 +134,20 @@ function App() {
       setIsTyping(false);
     }
   };
+
+  const handleAddMedicationSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.post(`${API_BASE_URL}/medications`, newMedicationForm, config);
+      closeAddMedicationModal();
+      fetchData(); // Refresh data after adding
+    } catch (err) {
+      console.error("Error adding medication:", err);
+      setAuthError(err.response?.data?.error || 'Failed to add medication.'); // Reusing authError for simplicity, consider a dedicated error state
+    }
+  };
+
 
   if (!user) {
     return (
@@ -163,7 +212,7 @@ function App() {
             <h2 className="text-3xl font-bold">Inventory Dashboard</h2>
             <p className="text-gray-400">Welcome back, Pharmacist.</p>
           </div>
-          <button className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20">
+          <button onClick={openAddMedicationModal} className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20">
             + New Entry
           </button>
         </header>
@@ -252,6 +301,59 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Add Medication Modal */}
+      {showAddMedicationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-lg shadow-2xl">
+            <h3 className="text-2xl font-bold text-teal-400 mb-6">Add New Medication</h3>
+            <form onSubmit={handleAddMedicationSubmit} className="space-y-4">
+              <div className="flex flex-col">
+                <label htmlFor="name" className="text-sm text-gray-400 mb-1">Name</label>
+                <input type="text" id="name" name="name" value={newMedicationForm.name} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="category" className="text-sm text-gray-400 mb-1">Category</label>
+                <input type="text" id="category" name="category" value={newMedicationForm.category} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="quantity" className="text-sm text-gray-400 mb-1">Quantity</label>
+                <input type="number" id="quantity" name="quantity" value={newMedicationForm.quantity} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="reorder_threshold" className="text-sm text-gray-400 mb-1">Reorder Threshold</label>
+                <input type="number" id="reorder_threshold" name="reorder_threshold" value={newMedicationForm.reorder_threshold} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="expiry_date" className="text-sm text-gray-400 mb-1">Expiry Date</label>
+                <input type="date" id="expiry_date" name="expiry_date" value={newMedicationForm.expiry_date} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="price" className="text-sm text-gray-400 mb-1">Price</label>
+                <input type="number" id="price" name="price" value={newMedicationForm.price} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
+              </div>
+
+              {authError && <p className="text-red-400 text-sm ml-1">{authError}</p>}
+
+              <div className="flex justify-end gap-4 mt-6">
+                <button 
+                  type="button" 
+                  onClick={closeAddMedicationModal} 
+                  className="px-5 py-2.5 rounded-xl text-gray-300 hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="bg-teal-500 hover:bg-teal-400 text-black px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
+                >
+                  Add Medication
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
