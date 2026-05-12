@@ -44,10 +44,6 @@ app.post('/api/copilot/chat', async (req, res) => {
 
     // 3. Call Gemini
     // Convert history to Gemini format (user/model roles)
-    const geminiHistory = history.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model', // Gemini uses 'model' for assistant responses
-      parts: [{ text: msg.content }]
-    }));
     const geminiHistory = history
       .filter((msg, index) => !(index === 0 && msg.role === 'assistant'))
       .map(msg => ({
