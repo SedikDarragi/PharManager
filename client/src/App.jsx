@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2, Shield, Building2, Users } from 'lucide-react';
+import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2, Shield, Building2, Users, History, PlusCircle, RefreshCw, XCircle, Truck, Phone, Mail } from 'lucide-react';
 import axios from 'axios';
 import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -29,6 +29,19 @@ function App() {
   const [isTyping, setIsTyping] = useState(false);
   const [showWelcomeAlertsPopup, setShowWelcomeAlertsPopup] = useState(false); // State for welcome alerts popup
 
+  // Activity History State
+  const [activityLogs, setActivityLogs] = useState([]);
+
+  // Supplier State
+  const [suppliers, setSuppliers] = useState([]);
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [newSupplierForm, setNewSupplierForm] = useState({
+    name: '',
+    contact_name: '',
+    email: '',
+    phone: ''
+  });
+
   // Profile & Settings State
   const [orgDetails, setOrgDetails] = useState(null);
   const [orgMembers, setOrgMembers] = useState([]);
@@ -56,6 +69,7 @@ function App() {
     reorder_threshold: 0,
     expiry_date: '', // YYYY-MM-DD format
     price: 0,
+    supplier_id: ''
   });
   
   // State for Edit Medication Modal
@@ -135,6 +149,34 @@ function App() {
       }
     }
   };
+
+  const fetchActivityLogs = async () => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const res = await axios.get(`${API_BASE_URL}/activity-logs`, config);
+      setActivityLogs(res.data);
+    } catch (err) {
+      console.error("Logs fetch error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'history' && user) fetchActivityLogs();
+  }, [activeView, user]);
+
+  const fetchSuppliers = async () => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const res = await axios.get(`${API_BASE_URL}/suppliers`, config);
+      setSuppliers(res.data);
+    } catch (err) {
+      console.error("Suppliers fetch error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (user) fetchSuppliers();
+  }, [user]);
 
   const fetchProfileData = async () => {
     try {
@@ -219,6 +261,7 @@ function App() {
       // Ensure expiry_date is a valid string for the input type="date"
       expiry_date: '',
       price: 0,
+      supplier_id: ''
     });
   };
 
@@ -258,6 +301,14 @@ function App() {
     setNewMedicationForm(prev => ({
       ...prev,
       [name]: type === 'number' ? Number(value) : value
+    }));
+  };
+
+  const handleNewSupplierChange = (e) => {
+    const { name, value } = e.target;
+    setNewSupplierForm(prev => ({
+      ...prev,
+      [name]: value
     }));
   };
 
@@ -304,6 +355,18 @@ function App() {
     } catch (err) {
       console.error("Error adding medication:", err);
       setAuthError(err.response?.data?.error || 'Failed to add medication.'); // Reusing authError for simplicity, consider a dedicated error state
+    }
+  };
+
+  const handleAddSupplierSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.post(`${API_BASE_URL}/suppliers`, newSupplierForm, config);
+      setShowAddSupplierModal(false);
+      fetchSuppliers();
+    } catch (err) {
+      alert("Failed to add supplier");
     }
   };
 
@@ -447,7 +510,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: COLORS.bg }}>
         <div className="bg-[#161B2D] p-8 rounded-3xl border border-gray-800 w-full max-w-md shadow-2xl">
           <h1 className="text-3xl font-bold text-teal-400 mb-2 flex items-center gap-2">
-            <Package /> PharmaSmart
+            <Package /> PharManage
           </h1>
           <p className="text-gray-400 mb-8">{authMode === 'login' ? 'Login to manage inventory' : 'Create an account to get started'}</p>
           
@@ -500,11 +563,13 @@ function App() {
       {/* Sidebar */}
       <nav className="w-64 border-r border-gray-800 p-6 flex flex-col gap-8 shrink-0 overflow-y-auto">
         <h1 className="text-2xl font-bold text-teal-400 flex items-center gap-2">
-          <Package /> PharmaSmart
+          <Package /> PharManage
         </h1>
         <div className="flex flex-col gap-2">
           <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" isActive={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <NavItem icon={<Package size={20} />} label="Inventory" isActive={activeView === 'inventory'} onClick={() => setActiveView('inventory')} />
+          <NavItem icon={<Truck size={20} />} label="Suppliers" isActive={activeView === 'suppliers'} onClick={() => setActiveView('suppliers')} />
+          <NavItem icon={<History size={20} />} label="History" isActive={activeView === 'history'} onClick={() => setActiveView('history')} />
           {user.role !== 'admin' && (
             <NavItem icon={<Bell size={20} />} label="Alerts" isActive={activeView === 'alerts'} onClick={() => setActiveView('alerts')} count={alerts.length} />
           )}
@@ -607,6 +672,52 @@ function App() {
           </>
         )}
 
+        {activeView === 'suppliers' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-teal-400">Supplier Directory</h3>
+              <button onClick={() => setShowAddSupplierModal(true)} className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20">
+                + Add Supplier
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {suppliers.map(s => (
+                <div key={s.id} className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg relative group">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center text-teal-400 border border-teal-500/20">
+                      <Truck size={24} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-white">{s.name}</h4>
+                      <p className="text-xs text-gray-500 uppercase font-bold tracking-widest">{s.contact_name}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <Mail size={14} className="text-teal-500" /> {s.email}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <Phone size={14} className="text-teal-500" /> {s.phone}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      if(window.confirm('Delete this supplier?')) {
+                        const config = { headers: { Authorization: `Bearer ${user.token}` } };
+                        await axios.delete(`${API_BASE_URL}/suppliers/${s.id}`, config);
+                        fetchSuppliers();
+                      }
+                    }}
+                    className="absolute top-4 right-4 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {(activeView === 'dashboard' || activeView === 'inventory') && (
           <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
             <table className="w-full text-left">
@@ -614,6 +725,7 @@ function App() {
                 <tr>
                   <th className="p-5">Medication Name</th>
                   <th className="p-5">Category</th>
+                  <th className="p-5">Supplier</th>
                   <th className="p-5">Stock</th>
                   <th className="p-5">Expiry</th>
                   <th className="p-5">Status</th>
@@ -627,6 +739,7 @@ function App() {
                     key={med.id} className="group">
                     <td className="p-5 font-semibold">{med.name}</td>
                     <td className="p-5 text-gray-400">{med.category}</td>
+                    <td className="p-5 text-teal-400/70 text-sm italic">{med.supplier_name || 'N/A'}</td>
                     <td className="p-5">{med.quantity} Units</td>
                     <td className="p-5 text-gray-300">{med.expiry_date}</td>
                     <td className="p-5">
@@ -645,6 +758,51 @@ function App() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {activeView === 'history' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+              <div className="p-6 border-b border-gray-800 bg-[#1E3A5F]/10 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-teal-400 flex items-center gap-2"><History /> Audit Trail</h3>
+                <span className="text-xs text-gray-500 uppercase tracking-widest font-bold">Latest 50 Actions</span>
+              </div>
+              <div className="divide-y divide-gray-800/50">
+                {activityLogs.length === 0 ? (
+                  <div className="p-10 text-center text-gray-500 italic">No activity recorded yet.</div>
+                ) : (
+                  activityLogs.map(log => {
+                    const ActionIcon = { ADD: PlusCircle, UPDATE: RefreshCw, DELETE: Trash2, CLEAR: XCircle }[log.action] || History;
+                    const actionColor = { ADD: 'text-teal-400', UPDATE: 'text-orange-400', DELETE: 'text-red-400', CLEAR: 'text-red-500' }[log.action] || 'text-gray-400';
+                    
+                    return (
+                      <div key={log.id} className="p-5 flex items-center gap-6 hover:bg-gray-800/20 transition-all group">
+                        <div className={`p-3 rounded-xl bg-gray-900 border border-gray-800 ${actionColor}`}>
+                          <ActionIcon size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-white text-sm">{log.username}</span>
+                            <span className={`text-[10px] font-black uppercase px-1.5 py-0.5 rounded border border-current/20 ${actionColor} opacity-70`}>
+                              {log.action}
+                            </span>
+                          </div>
+                          <p className="text-gray-400 text-sm">{log.details}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-mono text-gray-500">{new Date(log.timestamp).toLocaleDateString()}</p>
+                          <p className="text-[10px] text-gray-600">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            <div className="p-4 bg-teal-500/5 border border-teal-500/10 rounded-xl text-center">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Logs are permanent and visible to all organization members for safety compliance.</p>
+            </div>
+          </motion.div>
         )}
 
         {activeView === 'alerts' && (
@@ -980,6 +1138,15 @@ function App() {
                   <label htmlFor="price" className="text-sm text-gray-400 mb-1">Price</label>
                   <input type="number" id="price" name="price" value={newMedicationForm.price} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
                 </div>
+                <div className="flex flex-col">
+                  <label htmlFor="supplier_id" className="text-sm text-gray-400 mb-1">Supplier</label>
+                  <select id="supplier_id" name="supplier_id" value={newMedicationForm.supplier_id} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500">
+                    <option value="">Select a Supplier</option>
+                    {suppliers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="flex justify-end gap-4 mt-6">
                   <button 
@@ -1049,6 +1216,15 @@ function App() {
                     <label className="text-xs font-bold text-gray-500 uppercase">Price ($)</label>
                     <input type="number" name="price" value={editingMedication.price} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
                   </div>
+                </div>
+                <div className="flex flex-col space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Supplier</label>
+                  <select name="supplier_id" value={editingMedication.supplier_id || ''} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500">
+                    <option value="">Select a Supplier</option>
+                    {suppliers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex justify-end gap-4 pt-4">
                   <button type="button" onClick={closeEditMedicationModal} className="px-6 py-2.5 text-gray-400 hover:text-white font-semibold">Cancel</button>
@@ -1268,6 +1444,60 @@ function App() {
                   </table>
                 )}
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Supplier Modal */}
+      <AnimatePresence>
+        {showAddSupplierModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[70] p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#161B2D] p-8 rounded-2xl border border-gray-800 w-full max-w-md shadow-2xl"
+            >
+              <h3 className="text-2xl font-bold text-teal-400 mb-6">Register New Supplier</h3>
+              <form onSubmit={handleAddSupplierSubmit} className="space-y-4">
+                <div className="flex flex-col">
+                  <label className="text-sm text-gray-400 mb-1">Company Name</label>
+                  <input type="text" name="name" value={newSupplierForm.name} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm text-gray-400 mb-1">Contact Person</label>
+                  <input type="text" name="contact_name" value={newSupplierForm.contact_name} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm text-gray-400 mb-1">Email Address</label>
+                  <input type="email" name="email" value={newSupplierForm.email} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm text-gray-400 mb-1">Phone Number</label>
+                  <input type="text" name="phone" value={newSupplierForm.phone} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                </div>
+                <div className="flex justify-end gap-4 mt-6">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAddSupplierModal(false)} 
+                    className="px-5 py-2.5 rounded-xl text-gray-400 hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
+                  >
+                    Save Supplier
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
