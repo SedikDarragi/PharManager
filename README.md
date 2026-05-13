@@ -1,6 +1,6 @@
-# PharManage
+# PharManager
 
-PharManage is a professional-grade, multi-tenant Pharmacy Management System (PMS) designed to streamline inventory control, supplier relations, and financial tracking. It features **PharmAI**, an integrated AI assistant that provides real-time insights into your stock and sales data.
+PharManager is a professional-grade, multi-tenant Pharmacy Management System (PMS) designed to streamline inventory control, supplier relations, and financial tracking. It features **PharmAI**, an integrated AI assistant that provides real-time insights into your stock and sales data.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-teal)
 ![License](https://img.shields.io/badge/license-MIT-blue)
