@@ -298,7 +298,7 @@ app.post('/api/sales', authenticateToken, (req, res) => {
 
     processSale();
     db.refreshAlerts(req.user.orgId);
-    logActivity(req.user.orgId, req.user.id, 'UPDATE', `Dispensed ${quantity} units of ${med.name}. Total: $${total}`);
+    logActivity(req.user.orgId, req.user.id, 'UPDATE', `Dispensed ${quantity} units of ${med.name}. Total: ${total} DT`);
     res.json({ success: true, total });
   } catch (error) {
     res.status(500).json({ error: "Failed to process dispensing." });

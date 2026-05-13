@@ -574,7 +574,7 @@ function App() {
       }
 
       // CSV Generation
-      const headers = ["Name", "Category", "Supplier", "Quantity", "Reorder Threshold", "Expiry Date", "Price ($)"];
+      const headers = ["Name", "Category", "Supplier", "Quantity", "Reorder Threshold", "Expiry Date", "Price (DT)"];
       const csvRows = [
         headers.join(','), // Header row
         ...data.map(row => [
@@ -807,7 +807,7 @@ function App() {
               <KPICard title={t('totalSkus')} value={summary.totalSkus} />
               <KPICard title={t('lowStock')} value={summary.lowStock} color="text-orange-400" />
               <KPICard title={t('stockouts')} value={summary.stockouts} color="text-red-400" />
-              <KPICard title={t('inventoryValue')} value={`$${summary.totalValue}`} />
+              <KPICard title={t('inventoryValue')} value={`${summary.totalValue} DT`} />
             </div>
           </>
         )}
@@ -870,7 +870,7 @@ function App() {
                     <LineChart data={revenueChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
                       <XAxis dataKey="date" stroke="#9CA3AF" fontSize={10} tickFormatter={(str) => str.split('-').slice(1).join('/')} />
-                      <YAxis stroke="#9CA3AF" fontSize={10} tickFormatter={(val) => `$${val}`} />
+                      <YAxis stroke="#9CA3AF" fontSize={10} tickFormatter={(val) => `${val} DT`} />
                       <Tooltip 
                         contentStyle={{ backgroundColor: COLORS.card, border: '1px solid #374151', borderRadius: '12px' }}
                         itemStyle={{ color: COLORS.accent }}
@@ -882,7 +882,7 @@ function App() {
               </div>
               <div className="space-y-6">
                 <KPICard title={t('totalTransactions')} value={salesRecords.length} color="text-teal-400" />
-                <KPICard title={t('dailyAverage')} value={`$${(revenueChartData.reduce((a, b) => a + b.revenue, 0) / (revenueChartData.length || 1)).toFixed(2)}`} />
+                <KPICard title={t('dailyAverage')} value={`${(revenueChartData.reduce((a, b) => a + b.revenue, 0) / (revenueChartData.length || 1)).toFixed(2)} DT`} />
               </div>
             </div>
 
@@ -910,8 +910,8 @@ function App() {
                         </td>
                         <td className="p-4 font-semibold text-white">{sale.med_name || 'Deleted Medication'}</td>
                         <td className="p-4 text-gray-300">{sale.quantity}</td>
-                        <td className="p-4 text-gray-400">${sale.price_at_sale.toFixed(2)}</td>
-                        <td className="p-4 text-teal-400 font-bold">${sale.total.toFixed(2)}</td>
+                        <td className="p-4 text-gray-400">{sale.price_at_sale.toFixed(2)} DT</td>
+                        <td className="p-4 text-teal-400 font-bold">{sale.total.toFixed(2)} DT</td>
                         <td className="p-4">
                           <span className="bg-gray-800 px-2 py-1 rounded text-xs text-gray-300">{sale.username}</span>
                         </td>
@@ -1442,7 +1442,7 @@ function App() {
                     <input type="date" name="expiry_date" value={editingMedication.expiry_date} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
                   </div>
                   <div className="flex flex-col space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase">Price ($)</label>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Price (DT)</label>
                     <input type="number" name="price" value={editingMedication.price} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
                   </div>
                 </div>
@@ -1619,7 +1619,7 @@ function App() {
                             <td className="p-4 font-semibold text-white">{med.name}</td>
                             <td className="p-4 text-gray-400">{med.category}</td>
                             <td className="p-4 text-gray-300">{med.quantity} Units</td>
-                            <td className="p-4 text-teal-400">${med.price}</td>
+                            <td className="p-4 text-teal-400">{med.price} DT</td>
                             <td className="p-4 text-gray-400">{med.expiry_date}</td>
                             <td className="p-4 text-right">
                               <button onClick={() => { setIsAdminAction(true); openEditMedicationModal(med); }} className="text-gray-500 hover:text-teal-400 p-1 mr-1">
