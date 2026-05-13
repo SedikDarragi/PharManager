@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const db = new Database('pharmacy.db');
 
 db.exec("PRAGMA foreign_keys = ON;");
+db.pragma('journal_mode = WAL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

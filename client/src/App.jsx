@@ -894,12 +894,12 @@ function App() {
                 <table className="w-full text-left">
                   <thead className="bg-gray-900/50 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
                     <tr>
-                      <th className="p-4">{t('timestamp')}</th>
-                      <th className="p-4">{t('medName')}</th>
-                      <th className="p-4">{t('qty')}</th>
-                      <th className="p-4">{t('unitPrice')}</th>
-                      <th className="p-4">{t('total')}</th>
-                      <th className="p-4">{t('dispensedBy')}</th>
+                      <th className="p-4 whitespace-nowrap">{t('timestamp')}</th>
+                      <th className="p-4 whitespace-nowrap">{t('medName')}</th>
+                      <th className="p-4 whitespace-nowrap">{t('qty')}</th>
+                      <th className="p-4 whitespace-nowrap">{t('unitPrice')}</th>
+                      <th className="p-4 whitespace-nowrap">{t('total')}</th>
+                      <th className="p-4 whitespace-nowrap">{t('dispensedBy')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800">
@@ -908,11 +908,11 @@ function App() {
                         <td className="p-4 text-gray-500 font-mono text-xs">
                           {new Date(sale.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="p-4 font-semibold text-white">{sale.med_name || 'Deleted Medication'}</td>
-                        <td className="p-4 text-gray-300">{sale.quantity}</td>
-                        <td className="p-4 text-gray-400">{sale.price_at_sale.toFixed(2)} DT</td>
-                        <td className="p-4 text-teal-400 font-bold">{sale.total.toFixed(2)} DT</td>
-                        <td className="p-4">
+                        <td className="p-4 font-semibold text-white whitespace-nowrap">{sale.med_name || 'Deleted Medication'}</td>
+                        <td className="p-4 text-gray-300 whitespace-nowrap">{sale.quantity}</td>
+                        <td className="p-4 text-gray-400 whitespace-nowrap">{sale.price_at_sale.toFixed(2)} DT</td>
+                        <td className="p-4 text-teal-400 font-bold whitespace-nowrap">{sale.total.toFixed(2)} DT</td>
+                        <td className="p-4 whitespace-nowrap">
                           <span className="bg-gray-800 px-2 py-1 rounded text-xs text-gray-300">{sale.username}</span>
                         </td>
                       </tr>
@@ -932,13 +932,13 @@ function App() {
             <table className="w-full text-left">
               <thead className="bg-[#1E3A5F] text-teal-400 text-xs font-bold uppercase tracking-wider">
                 <tr>
-                  <th className="p-5">{t('medName')}</th>
-                  <th className="p-5">{t('category')}</th>
-                  <th className="p-5">{t('supplier')}</th>
-                  <th className="p-5">{t('stock')}</th>
-                  <th className="p-5">{t('expiry')}</th>
-                  <th className="p-5">{t('status')}</th>
-                <th className="p-5 text-right">{t('actions')}</th>
+                  <th className="p-5 whitespace-nowrap">{t('medName')}</th>
+                  <th className="p-5 whitespace-nowrap">{t('category')}</th>
+                  <th className="p-5 whitespace-nowrap">{t('supplier')}</th>
+                  <th className="p-5 whitespace-nowrap">{t('stock')}</th>
+                  <th className="p-5 whitespace-nowrap">{t('expiry')}</th>
+                  <th className="p-5 whitespace-nowrap">{t('status')}</th>
+                  <th className="p-5 text-right whitespace-nowrap">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -946,15 +946,15 @@ function App() {
                   <motion.tr
                     whileHover={{ backgroundColor: 'rgba(30, 58, 95, 0.3)' }} // Equivalent to navy-accent with opacity
                     key={med.id} className="group">
-                    <td className="p-5 font-semibold">{med.name}</td>
-                    <td className="p-5 text-gray-400">{med.category}</td>
-                    <td className="p-5 text-teal-400/70 text-sm italic">{med.supplier_name || 'N/A'}</td>
-                    <td className="p-5">{med.quantity} {t('units')}</td>
-                    <td className="p-5 text-gray-300">{med.expiry_date}</td>
-                    <td className="p-5">
+                    <td className="p-5 font-semibold whitespace-nowrap">{med.name}</td>
+                    <td className="p-5 text-gray-400 whitespace-nowrap">{med.category}</td>
+                    <td className="p-5 text-teal-400/70 text-sm italic whitespace-nowrap">{med.supplier_name || 'N/A'}</td>
+                    <td className="p-5 whitespace-nowrap">{med.quantity} {t('units')}</td>
+                    <td className="p-5 text-gray-300 whitespace-nowrap">{med.expiry_date}</td>
+                    <td className="p-5 whitespace-nowrap">
                       <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} language={language} />
                     </td>
-                  <td className="p-5 text-right">
+                    <td className="p-5 text-right whitespace-nowrap">
                     <button type="button" onClick={() => handleDispenseMedication(med.id)} className="text-gray-500 hover:text-orange-400 p-2 rounded-lg hover:bg-orange-500/10 transition-all inline-flex items-center justify-center mr-1" title="Dispense/Sell">
                       <ShoppingCart size={16} />
                     </button>
@@ -1602,12 +1602,12 @@ function App() {
                   <table className="w-full text-left">
                     <thead className="bg-[#1E3A5F] text-teal-400 text-xs font-bold uppercase tracking-wider sticky top-0">
                       <tr>
-                        <th className="p-4">Medication</th>
-                        <th className="p-4">Category</th>
-                        <th className="p-4">Quantity</th>
-                        <th className="p-4">Price</th>
-                        <th className="p-4">Expiry</th>
-                        <th className="p-4 text-right">Actions</th>
+                      <th className="p-4 whitespace-nowrap">Medication</th>
+                      <th className="p-4 whitespace-nowrap">Category</th>
+                      <th className="p-4 whitespace-nowrap">Quantity</th>
+                      <th className="p-4 whitespace-nowrap">Price</th>
+                      <th className="p-4 whitespace-nowrap">Expiry</th>
+                      <th className="p-4 text-right whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
@@ -1616,12 +1616,12 @@ function App() {
                       ) : (
                         adminSelectedOrgMeds.map(med => (
                           <tr key={med.id} className="text-sm">
-                            <td className="p-4 font-semibold text-white">{med.name}</td>
-                            <td className="p-4 text-gray-400">{med.category}</td>
-                            <td className="p-4 text-gray-300">{med.quantity} Units</td>
-                            <td className="p-4 text-teal-400">{med.price} DT</td>
-                            <td className="p-4 text-gray-400">{med.expiry_date}</td>
-                            <td className="p-4 text-right">
+                          <td className="p-4 font-semibold text-white whitespace-nowrap">{med.name}</td>
+                          <td className="p-4 text-gray-400 whitespace-nowrap">{med.category}</td>
+                          <td className="p-4 text-gray-300 whitespace-nowrap">{med.quantity} Units</td>
+                          <td className="p-4 text-teal-400 whitespace-nowrap">{med.price} DT</td>
+                          <td className="p-4 text-gray-400 whitespace-nowrap">{med.expiry_date}</td>
+                          <td className="p-4 text-right whitespace-nowrap">
                               <button onClick={() => { setIsAdminAction(true); openEditMedicationModal(med); }} className="text-gray-500 hover:text-teal-400 p-1 mr-1">
                                 <Pencil size={14} />
                               </button>
@@ -1638,10 +1638,10 @@ function App() {
                   <table className="w-full text-left">
                     <thead className="bg-[#1E3A5F] text-teal-400 text-xs font-bold uppercase tracking-wider sticky top-0">
                       <tr>
-                        <th className="p-4">Username</th>
-                        <th className="p-4">Role</th>
-                        <th className="p-4">Joined</th>
-                        <th className="p-4 text-right">Actions</th>
+                        <th className="p-4 whitespace-nowrap">Username</th>
+                        <th className="p-4 whitespace-nowrap">Role</th>
+                        <th className="p-4 whitespace-nowrap">Joined</th>
+                        <th className="p-4 text-right whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
@@ -1650,14 +1650,14 @@ function App() {
                       ) : (
                         adminSelectedOrgUsers.map(u => (
                           <tr key={u.id} className="text-sm">
-                            <td className="p-4 font-semibold text-white">{u.username}</td>
-                            <td className="p-4">
+                            <td className="p-4 font-semibold text-white whitespace-nowrap">{u.username}</td>
+                            <td className="p-4 whitespace-nowrap">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${u.role === 'admin' ? 'bg-purple-500/10 text-purple-400' : 'bg-gray-700 text-gray-400'}`}>
                                 {u.role}
                               </span>
                             </td>
-                            <td className="p-4 text-gray-400">{new Date(u.created_at).toLocaleDateString()}</td>
-                            <td className="p-4 text-right">
+                            <td className="p-4 text-gray-400 whitespace-nowrap">{new Date(u.created_at).toLocaleDateString()}</td>
+                            <td className="p-4 text-right whitespace-nowrap">
                               <button 
                                 onClick={() => handleAdminDeleteUser(u.id, u.username)}
                                 className="text-gray-500 hover:text-red-400 p-1"
@@ -1768,7 +1768,7 @@ const StatusBadge = ({ qty, threshold, language }) => {
   else if (qty <= 5) config = { label: labels.low, color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' };
   
   return (
-    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${config.color}`}>
+    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border whitespace-nowrap ${config.color}`}>
       {config.label}
     </span>
   );

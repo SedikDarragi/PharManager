@@ -242,8 +242,12 @@ app.delete('/api/medications/all/clear', authenticateToken, (req, res) => {
 app.delete('/api/medications/:id', authenticateToken, (req, res) => {
   const med = db.prepare('SELECT name FROM medications WHERE id = ? AND org_id = ?').get(req.params.id, req.user.orgId);
   if (med) {
-    db.prepare('DELETE FROM alerts WHERE med_id = ? AND org_id = ?').run(req.params.id, req.user.orgId);
-    db.prepare('DELETE FROM medications WHERE id = ? AND org_id = ?').run(req.params.id, req.user.orgId);
+    const deleteTransaction = db.transaction(() => {
+      db.prepare('DELETE FROM alerts WHERE med_id = ? AND org_id = ?').run(req.params.id, req.user.orgId);
+      db.prepare('DELETE FROM medications WHERE id = ? AND org_id = ?').run(req.params.id, req.user.orgId);
+    });
+
+    deleteTransaction();
     db.refreshAlerts(req.user.orgId);
     logActivity(req.user.orgId, req.user.id, 'DELETE', `Deleted medication: ${med.name}`);
   }
