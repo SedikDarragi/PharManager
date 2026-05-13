@@ -51,7 +51,7 @@ const isAdmin = (req, res, next) => {
 
 // Auth Routes
 app.post('/api/auth/register', async (req, res) => {
-  const { username, password, organizationName } = req.body;
+  const { username, password, organizationName, language } = req.body;
   try {
     // Find or create organization
     let org = db.prepare('SELECT id FROM organizations WHERE name = ?').get(organizationName);
@@ -61,15 +61,16 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const stmt = db.prepare('INSERT INTO users (username, password, org_id) VALUES (?, ?, ?)');
-    const info = stmt.run(username, hashedPassword, org.id); 
+    const stmt = db.prepare('INSERT INTO users (username, password, org_id, language) VALUES (?, ?, ?, ?)');
+    const info = stmt.run(username, hashedPassword, org.id, language || 'en'); 
     
-    const newUser = { id: info.lastInsertRowid, username, orgId: org.id, role: 'pharmacist' };
+    const newUser = { id: info.lastInsertRowid, username, orgId: org.id, role: 'pharmacist', language: language || 'en' };
     const token = jwt.sign({ 
       id: newUser.id, 
       username: newUser.username,
       orgId: newUser.orgId,
-      role: newUser.role
+      role: newUser.role,
+      language: newUser.language
     }, JWT_SECRET, { expiresIn: '24h' });
 
     res.json({ success: true, user: newUser, token });
@@ -79,21 +80,28 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, language } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
   
   if (!user || !(await bcrypt.compare(password, user.password))) {
     return res.status(400).json({ error: "Invalid username or password." });
   }
 
+  // Update language preference on login if provided
+  if (language) {
+    db.prepare('UPDATE users SET language = ? WHERE id = ?').run(language, user.id);
+    user.language = language;
+  }
+
   const token = jwt.sign({ 
     id: user.id, 
     username: user.username, 
     orgId: user.org_id,
-    role: user.role
+    role: user.role,
+    language: user.language
   }, JWT_SECRET, { expiresIn: '24h' });
 
-  res.json({ token, user: { id: user.id, username: user.username, orgId: user.org_id, role: user.role } });
+  res.json({ token, user: { id: user.id, username: user.username, org_id: user.org_id, role: user.role, language: user.language } });
 });
 
 // Initialize Groq

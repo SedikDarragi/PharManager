@@ -1,80 +1,97 @@
-# PharManage - AI-Powered Pharmacy Inventory Management
+# PharManage 💊
 
-PharManage is a modern, full-stack inventory management system designed specifically for pharmacies. It features a real-time dashboard, automated alerting for low stock and expiration dates, and an integrated AI Copilot to assist pharmacists with clinical and inventory insights.
+PharManage is a professional-grade, multi-tenant Pharmacy Management System (PMS) designed to streamline inventory control, supplier relations, and financial tracking. It features **PharmAI**, an integrated AI assistant that provides real-time insights into your stock and sales data.
 
-## Features
+![Version](https://img.shields.io/badge/version-1.0.0-teal)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-- **Inventory Management**: Complete CRUD operations for medications including tracking by category, quantity, price, and expiry date.
-- **Multi-tenant Organizations**: Users are associated with organizations upon signup. Stock data is shared and synced across all users within the same organization.
-- **AI Pharmacist Copilot**: Built-in assistant powered by Google Gemini 1.5 Flash that analyzes live inventory data to answer queries and provide proactive suggestions.
-- **Analytics Dashboard**: Visual representations of stock status (Healthy, Low Stock, Stockout) and category distribution using interactive charts.
-- **Smart Alerting**: Persistent notifications for stock levels falling to 5 units or lower and upcoming/past medication expiries.
-- **Secure Authentication**: JWT-based user authentication and password hashing with Bcrypt.
-- **Modern UI**: A responsive, dark-themed interface built with React, Tailwind CSS, and Framer Motion for smooth transitions.
+---
 
-## Environment & Tech Stack
+## ✨ Key Features
 
-### Frontend
-- **React (Vite)**: Component-based UI development.
-- **Tailwind CSS**: Utility-first styling.
-- **Framer Motion**: Advanced UI animations and modal transitions.
-- **Recharts**: Interactive data visualization and charts.
-- **Axios**: HTTP client for API communication.
+### 🧠 PharmAI Assistant
+Powered by **Groq (Llama 3.1)**, PharmAI acts as a clinical co-pilot. Ask questions about your inventory levels, expiry risks, or sales performance in natural language (English or French).
 
-### Backend
-- **Node.js & Express**: Server-side runtime and API framework.
-- **SQLite (better-sqlite3)**: Lightweight, high-performance relational database.
-- **JWT**: Secure token-based session management.
-- **Google Generative AI**: Integration with Gemini 1.5 Flash for the AI Copilot.
+### 🏢 Organizational Multi-Tenancy
+Built for scale. Users sign up under specific Organizations (Clinics/Pharmacies). Stock levels, supplier lists, and alerts are synchronized in real-time across all members of the same organization.
 
-## Prerequisites
+### 📦 Advanced Inventory & Suppliers
+- **Smart Tracking**: Monitor stock with automatic "Low Stock" and "Expiry" alerts.
+- **Supplier Directory**: Link medications to specific distributors for streamlined reordering.
+- **Data Integrity**: Full CRUD operations for stock with enforced referential integrity.
 
-- [Node.js](https://nodejs.org/) (v18.0.0 or higher)
-- npm (comes with Node.js)
-- A [Google AI Studio](https://aistudio.google.com/) API key.
+### 💰 Sales & Analytics
+- **Dispensing Module**: Real-time stock reduction upon sale.
+- **Financial Intelligence**: Dashboard featuring revenue trend lines and category distribution charts.
+- **Export Capability**: Generate one-click CSV reports for audits or accounting.
 
-## Installation
+### 🛡️ Security & Accountability
+- **Audit Trail**: A permanent, non-destructive activity log tracking who added, updated, or deleted any record.
+- **Role-Based Access**: Dedicated Admin Panel for global oversight of organizations and user accounts.
+- **JWT Authentication**: Secure session management with persistent language preferences.
 
-1. **Clone the repository**:
+---
+
+## 🛠️ Tech Stack
+
+**Frontend:**
+- React.js (Vite)
+- Tailwind CSS (UI/UX)
+- Framer Motion (Animations)
+- Recharts (Data Visualization)
+- Lucide React (Iconography)
+
+**Backend:**
+- Node.js & Express
+- Better-SQLite3 (Fast, reliable local database)
+- Groq SDK (AI Inference)
+- JSON Web Tokens (Security)
+- Bcrypt.js (Password Hashing)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18+)
+- A Groq API Key (Get one free at [console.groq.com](https://console.groq.com))
+
+### Installation
+
+1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd pharmanage
+   git clone https://github.com/SedikDarragi/PharManage.git
+   cd PharManage
    ```
 
-2. **Configure Environment Variables**:
-   Create a `.env` file in the root directory of the project:
-   ```env
-   GEMINI_API_KEY=your_actual_gemini_api_key
-   JWT_SECRET=a_secure_random_string_for_jwt
-   ```
-
-3. **Install Server Dependencies**:
+2. **Setup Backend**
    ```bash
    cd server
    npm install
    ```
 
-4. **Install Client Dependencies**:
+3. **Setup Frontend**
    ```bash
    cd ../client
    npm install
    ```
 
-## Running the Application
+4. **Environment Variables**
+   Create a `.env` file in the root directory:
+   ```env
+   JWT_SECRET=your_secret_key
+   GROQ_API_KEY=your_groq_api_key
+   ```
 
-For development, you can run both the client and server simultaneously from the project root directory:
+### Running the App
 
-```bash
-npm run dev
-```
-The server will start on `http://localhost:5000`. It will automatically initialize the SQLite database (`pharmacy.db`) and seed initial data if needed.
+**Start Server:**
+`cd server && npm start`
 
-### 2. Start the Frontend Client
-From the `client` directory:
-```bash
-npm run dev
-```
-The application will typically be accessible at `http://localhost:5173`.
+**Start Client:**
+`cd client && npm run dev`
 
-## License
-Distributed under the MIT License.
+---
+
+## 🌍 Language Support
+PharManage is fully localized in **English** and **French**. Language preferences are saved to your user profile and persist across sessions.

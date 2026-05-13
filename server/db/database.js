@@ -11,6 +11,7 @@ db.exec(`
     username TEXT UNIQUE,
     password TEXT,
     role TEXT DEFAULT 'pharmacist',
+    language TEXT DEFAULT 'en',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (org_id) REFERENCES organizations (id)
   );
@@ -84,6 +85,13 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
   );
 `);
+
+// Migration: Add language column to users table if it doesn't exist
+try {
+  db.exec("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'en'");
+} catch (e) {
+  // Column likely already exists, we can safely ignore this error
+}
 
 // Example Seed Data Logic
 const seedMeds = [

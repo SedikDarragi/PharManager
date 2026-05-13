@@ -12,13 +12,60 @@ const COLORS = {
   navy: '#1E3A5F'
 };
 
+const TRANSLATIONS = {
+  en: {
+    login: 'Login', register: 'Register', username: 'Username', password: 'Password', orgName: 'Organization Name',
+    signIn: 'Sign In', createAccount: 'Create Account', dashboard: 'Dashboard', inventory: 'Inventory',
+    sales: 'Sales', suppliers: 'Suppliers', history: 'History', alerts: 'Alerts', admin: 'Admin Panel',
+    logout: 'Logout', welcome: 'Welcome back', newEntry: 'New Entry', clearStock: 'Clear Stock', export: 'Export',
+    inventoryDashboard: 'Inventory Dashboard', welcomePharmacist: 'Welcome back, Pharmacist.',
+    inventoryAnalytics: 'Inventory Analytics', stockStatus: 'Stock Status Overview', categories: 'Medication Categories',
+    totalSkus: 'Total SKUs', lowStock: 'Low Stock', stockouts: 'Stockouts', inventoryValue: 'Inventory Value',
+    medName: 'Medication Name', category: 'Category', supplier: 'Supplier', stock: 'Stock', expiry: 'Expiry',
+    status: 'Status', actions: 'Actions', units: 'Units', auditTrail: 'Audit Trail', latestActions: 'Latest 50 Actions',
+    revenueTrend: 'Revenue Trend (Last 7 Days)', totalTransactions: 'Total Transactions', dailyAverage: 'Daily Average',
+    transactionLog: 'Transaction Log', timestamp: 'Timestamp', qty: 'Qty', unitPrice: 'Unit Price', total: 'Total',
+    dispensedBy: 'Dispensed By', aiPlaceholder: 'Ask about your inventory...', registerPatient: 'Register Patient',
+    healthy: 'Healthy', activeAlerts: 'Active Alerts', noAlerts: 'No active alerts at the moment. Your inventory is in good shape!',
+    name: 'Name', price: 'Price', reorderThreshold: 'Reorder Threshold', expiryDate: 'Expiry Date',
+    modifyStock: 'Modify Stock', updateEntry: 'Update Entry', cancel: 'Cancel', confirmDelete: 'Delete Medication?',
+    deletePlaceholder: 'Type "delete" here', confirmDeleteBtn: 'Confirm Delete'
+  },
+  fr: {
+    login: 'Connexion', register: 'S’inscrire', username: "Nom d'utilisateur", password: 'Mot de passe', orgName: 'Nom de l’organisation',
+    signIn: 'Se connecter', createAccount: 'Créer un compte', dashboard: 'Tableau de bord', inventory: 'Inventaire',
+    sales: 'Ventes', suppliers: 'Fournisseurs', history: 'Historique', alerts: 'Alertes', admin: 'Panel Admin',
+    logout: 'Déconnexion', welcome: 'Bon retour', newEntry: 'Nouvelle Entrée', clearStock: 'Vider le Stock', export: 'Exporter',
+    inventoryDashboard: 'Tableau de bord', welcomePharmacist: 'Bon retour, Pharmacien.',
+    inventoryAnalytics: 'Analyses de l\'inventaire', stockStatus: 'Aperçu du statut des stocks', categories: 'Catégories de médicaments',
+    totalSkus: 'Total des SKUs', lowStock: 'Stock Faible', stockouts: 'Ruptures de stock', inventoryValue: 'Valeur de l\'inventaire',
+    medName: 'Nom du Médicament', category: 'Catégorie', supplier: 'Fournisseur', stock: 'Stock', expiry: 'Expiration',
+    status: 'Statut', actions: 'Actions', units: 'Unités', auditTrail: 'Piste d\'audit', latestActions: '50 dernières actions',
+    revenueTrend: 'Tendance des revenus (7 derniers jours)', totalTransactions: 'Transactions totales', dailyAverage: 'Moyenne quotidienne',
+    transactionLog: 'Journal des transactions', timestamp: 'Horodatage', qty: 'Qté', unitPrice: 'Prix Unitaire', total: 'Total',
+    dispensedBy: 'Distribué par', aiPlaceholder: 'Posez une question sur votre stock...', registerPatient: 'Enregistrer Patient',
+    healthy: 'Sain', activeAlerts: 'Alertes Actives', noAlerts: 'Aucune alerte active pour le moment. Votre inventaire est en bon état !',
+    name: 'Nom', price: 'Prix', reorderThreshold: 'Seuil de réapprovisionnement', expiryDate: 'Date d\'expiration',
+    modifyStock: 'Modifier le Stock', updateEntry: 'Mettre à jour', cancel: 'Annuler', confirmDelete: 'Supprimer le médicament ?',
+    deletePlaceholder: 'Tapez "delete" ici', confirmDeleteBtn: 'Confirmer la suppression'
+  }
+};
+
 const API_BASE_URL = 'http://localhost:5000/api';
 
 function App() {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
   const [authMode, setAuthMode] = useState('login');
-  const [authForm, setAuthForm] = useState({ username: '', password: '', organizationName: '' });
+  const [authForm, setAuthForm] = useState({ username: '', password: '', organizationName: '', language: 'en' });
   const [authError, setAuthError] = useState('');
+  
+  const [language, setLanguage] = useState(user?.language || 'en');
+
+  const t = (key) => TRANSLATIONS[language]?.[key] || key;
+
+  useEffect(() => {
+    if (user?.language) setLanguage(user.language);
+  }, [user]);
 
   const [meds, setMeds] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -100,7 +147,7 @@ function App() {
         await fetchSuppliers();
         setChatHistory([{
           role: 'assistant',
-          content: `Good morning, ${user.username}! I'm PharmAI. I've synced with your live inventory. How can I help you today?`
+          content: `${language === 'fr' ? 'Bonjour' : 'Good morning'}, ${user.username}! I'm PharmAI. ${language === 'fr' ? 'J\'ai synchronisé votre inventaire en direct. Comment puis-je vous aider aujourd\'hui ?' : 'I\'ve synced with your live inventory. How can I help you today?'}`
         }]);
       };
       initializeDashboard();
@@ -585,38 +632,51 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: COLORS.bg }}>
         <div className="bg-[#161B2D] p-8 rounded-3xl border border-gray-800 w-full max-w-md shadow-2xl">
+          <div className="flex justify-end mb-4">
+            <select 
+              value={authForm.language} 
+              onChange={e => {
+                setAuthForm({...authForm, language: e.target.value});
+                setLanguage(e.target.value);
+              }}
+              className="bg-gray-800 text-xs text-gray-400 border border-gray-700 rounded-lg px-2 py-1 focus:outline-none"
+            >
+              <option value="en">English</option>
+              <option value="fr">Français</option>
+            </select>
+          </div>
           <h1 className="text-3xl font-bold text-teal-400 mb-2 flex items-center gap-2">
             <Package /> PharManage
           </h1>
-          <p className="text-gray-400 mb-8">{authMode === 'login' ? 'Login to manage inventory' : 'Create an account to get started'}</p>
+          <p className="text-gray-400 mb-8">{authMode === 'login' ? t('login') : t('register')}</p>
           
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Username</label>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">{t('username')}</label>
               <div className="relative">
                 <User className="absolute left-3 top-3 text-gray-500" size={18} />
-                <input type="text" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Enter username" required />
+                <input type="text" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} className="w-full bg-gray-900 text-white border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Enter username" required />
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Password</label>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">{t('password')}</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 text-gray-500" size={18} />
-                <input type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Enter password" required />
+                <input type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} className="w-full bg-gray-900 text-white border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Enter password" required />
               </div>
             </div>
             {authMode === 'register' && (
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Organization Name</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">{t('orgName')}</label>
                 <div className="relative">
                   <Package className="absolute left-3 top-3 text-gray-500" size={18} />
-                  <input type="text" value={authForm.organizationName} onChange={e => setAuthForm({...authForm, organizationName: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Pharmacy Name" required />
+                  <input type="text" value={authForm.organizationName} onChange={e => setAuthForm({...authForm, organizationName: e.target.value})} className="w-full bg-gray-900 text-white border border-gray-700 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-teal-500" placeholder="Pharmacy Name" required />
                 </div>
               </div>
             )}
             {authError && <p className="text-red-400 text-sm ml-1">{authError}</p>}
-            <button className="w-full bg-teal-500 hover:bg-teal-400 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-teal-500/20">
-              {authMode === 'login' ? 'Sign In' : 'Create Account'}
+            <button className="w-full bg-teal-500 hover:bg-teal-400 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-teal-500/20">
+              {authMode === 'login' ? t('signIn') : t('createAccount')}
             </button>
           </form>
           
@@ -642,23 +702,23 @@ function App() {
           <Package /> PharManage
         </h1>
         <div className="flex flex-col gap-2">
-          <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" isActive={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
-          <NavItem icon={<Package size={20} />} label="Inventory" isActive={activeView === 'inventory'} onClick={() => setActiveView('inventory')} />
-          <NavItem icon={<DollarSign size={20} />} label="Sales" isActive={activeView === 'sales'} onClick={() => setActiveView('sales')} />
-          <NavItem icon={<Truck size={20} />} label="Suppliers" isActive={activeView === 'suppliers'} onClick={() => setActiveView('suppliers')} />
-          <NavItem icon={<History size={20} />} label="History" isActive={activeView === 'history'} onClick={() => setActiveView('history')} />
+          <NavItem icon={<LayoutDashboard size={20} />} label={t('dashboard')} isActive={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
+          <NavItem icon={<Package size={20} />} label={t('inventory')} isActive={activeView === 'inventory'} onClick={() => setActiveView('inventory')} />
+          <NavItem icon={<DollarSign size={20} />} label={t('sales')} isActive={activeView === 'sales'} onClick={() => setActiveView('sales')} />
+          <NavItem icon={<Truck size={20} />} label={t('suppliers')} isActive={activeView === 'suppliers'} onClick={() => setActiveView('suppliers')} />
+          <NavItem icon={<History size={20} />} label={t('history')} isActive={activeView === 'history'} onClick={() => setActiveView('history')} />
           {user.role !== 'admin' && (
-            <NavItem icon={<Bell size={20} />} label="Alerts" isActive={activeView === 'alerts'} onClick={() => setActiveView('alerts')} count={alerts.length} />
+            <NavItem icon={<Bell size={20} />} label={t('alerts')} isActive={activeView === 'alerts'} onClick={() => setActiveView('alerts')} count={alerts.length} />
           )}
           {user.role === 'admin' && (
-            <NavItem icon={<Shield size={20} />} label="Admin Panel" isActive={activeView === 'admin'} onClick={() => setActiveView('admin')} />
+            <NavItem icon={<Shield size={20} />} label={t('admin')} isActive={activeView === 'admin'} onClick={() => setActiveView('admin')} />
           )}
         </div>
         <div className="mt-auto border-t border-gray-800 pt-6">
           <button onClick={() => setActiveView('profile')} className={`flex items-center gap-3 mb-4 w-full px-2 py-2 rounded-xl transition-all ${activeView === 'profile' ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20' : 'text-gray-300 hover:text-teal-400'}`}>
             <User size={20} /> <span className="font-bold">{user.username}</span>
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors px-2 font-semibold"><LogOut size={20} /> Logout</button>
+          <button onClick={handleLogout} className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors px-2 font-semibold"><LogOut size={20} /> {t('logout')}</button>
         </div>
       </nav>
 
@@ -666,18 +726,18 @@ function App() {
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-10">
           <div>
-            <h2 className="text-3xl font-bold">Inventory Dashboard</h2>
-            <p className="text-gray-400">Welcome back, Pharmacist.</p>
+            <h2 className="text-3xl font-bold">{t('inventoryDashboard')}</h2>
+            <p className="text-gray-400">{t('welcomePharmacist')}</p>
           </div>
           <div className="flex gap-4 items-center">
             <button onClick={handleExportInventory} className="bg-gray-800 hover:bg-gray-700 text-gray-300 p-2.5 rounded-xl border border-gray-700 transition-all flex items-center gap-2" title="Export to CSV">
-              <Download size={20} /> <span className="text-sm font-bold">Export</span>
+              <Download size={20} /> <span className="text-sm font-bold">{t('export')}</span>
             </button>
             <button onClick={() => { setIsAdminAction(false); setAuthError(''); setShowClearStockModal(true); }} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-6 py-2.5 rounded-xl font-bold transition-all border border-red-500/20">
-              Clear Stock
+              {t('clearStock')}
             </button>
-            <button onClick={openAddMedicationModal} className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20">
-              + New Entry
+            <button onClick={openAddMedicationModal} className="bg-teal-500 hover:bg-teal-400 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20">
+              + {t('newEntry')}
             </button>
           </div>
         </header>
@@ -686,7 +746,7 @@ function App() {
           <>
             {/* Inventory Analytics Section */}
             <div className="mb-10">
-              <h3 className="text-2xl font-bold text-teal-400 mb-6">Inventory Analytics</h3>
+              <h3 className="text-2xl font-bold text-teal-400 mb-6">{t('inventoryAnalytics')}</h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Stock Status Bar Chart */}
                 <motion.div
@@ -695,7 +755,7 @@ function App() {
                   transition={{ delay: 0.1, duration: 0.5 }}
                   className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
                 >
-                  <h4 className="text-xl font-semibold mb-4">Stock Status Overview</h4>
+                  <h4 className="text-xl font-semibold mb-4">{t('stockStatus')}</h4>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={stockStatusData}>
                       <XAxis dataKey="name" stroke="#9CA3AF" />
@@ -718,7 +778,7 @@ function App() {
                   transition={{ delay: 0.2, duration: 0.5 }}
                   className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-lg"
                 >
-                  <h4 className="text-xl font-semibold mb-4">Medication Categories</h4>
+                  <h4 className="text-xl font-semibold mb-4">{t('categories')}</h4>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -744,10 +804,10 @@ function App() {
 
             {/* KPI Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-              <KPICard title="Total SKUs" value={summary.totalSkus} />
-              <KPICard title="Low Stock" value={summary.lowStock} color="text-orange-400" />
-              <KPICard title="Stockouts" value={summary.stockouts} color="text-red-400" />
-              <KPICard title="Inventory Value" value={`$${summary.totalValue}`} />
+              <KPICard title={t('totalSkus')} value={summary.totalSkus} />
+              <KPICard title={t('lowStock')} value={summary.lowStock} color="text-orange-400" />
+              <KPICard title={t('stockouts')} value={summary.stockouts} color="text-red-400" />
+              <KPICard title={t('inventoryValue')} value={`$${summary.totalValue}`} />
             </div>
           </>
         )}
@@ -803,7 +863,7 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-xl">
                 <h3 className="text-xl font-bold text-teal-400 mb-6 flex items-center gap-2">
-                  <TrendingUp size={20}/> Revenue Trend (Last 7 Days)
+                  <TrendingUp size={20}/> {t('revenueTrend')}
                 </h3>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -821,25 +881,25 @@ function App() {
                 </div>
               </div>
               <div className="space-y-6">
-                <KPICard title="Total Transactions" value={salesRecords.length} color="text-teal-400" />
-                <KPICard title="Daily Average" value={`$${(revenueChartData.reduce((a, b) => a + b.revenue, 0) / (revenueChartData.length || 1)).toFixed(2)}`} />
+                <KPICard title={t('totalTransactions')} value={salesRecords.length} color="text-teal-400" />
+                <KPICard title={t('dailyAverage')} value={`$${(revenueChartData.reduce((a, b) => a + b.revenue, 0) / (revenueChartData.length || 1)).toFixed(2)}`} />
               </div>
             </div>
 
             <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
               <div className="p-6 border-b border-gray-800 bg-[#1E3A5F]/10">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2"><ShoppingCart size={20} className="text-orange-400" /> Transaction Log</h3>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><ShoppingCart size={20} className="text-orange-400" /> {t('transactionLog')}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-gray-900/50 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
                     <tr>
-                      <th className="p-4">Timestamp</th>
-                      <th className="p-4">Medication</th>
-                      <th className="p-4">Qty</th>
-                      <th className="p-4">Unit Price</th>
-                      <th className="p-4">Total</th>
-                      <th className="p-4">Dispensed By</th>
+                      <th className="p-4">{t('timestamp')}</th>
+                      <th className="p-4">{t('medName')}</th>
+                      <th className="p-4">{t('qty')}</th>
+                      <th className="p-4">{t('unitPrice')}</th>
+                      <th className="p-4">{t('total')}</th>
+                      <th className="p-4">{t('dispensedBy')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800">
@@ -872,13 +932,13 @@ function App() {
             <table className="w-full text-left">
               <thead className="bg-[#1E3A5F] text-teal-400 text-xs font-bold uppercase tracking-wider">
                 <tr>
-                  <th className="p-5">Medication Name</th>
-                  <th className="p-5">Category</th>
-                  <th className="p-5">Supplier</th>
-                  <th className="p-5">Stock</th>
-                  <th className="p-5">Expiry</th>
-                  <th className="p-5">Status</th>
-                <th className="p-5 text-right">Actions</th>
+                  <th className="p-5">{t('medName')}</th>
+                  <th className="p-5">{t('category')}</th>
+                  <th className="p-5">{t('supplier')}</th>
+                  <th className="p-5">{t('stock')}</th>
+                  <th className="p-5">{t('expiry')}</th>
+                  <th className="p-5">{t('status')}</th>
+                <th className="p-5 text-right">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -889,10 +949,10 @@ function App() {
                     <td className="p-5 font-semibold">{med.name}</td>
                     <td className="p-5 text-gray-400">{med.category}</td>
                     <td className="p-5 text-teal-400/70 text-sm italic">{med.supplier_name || 'N/A'}</td>
-                    <td className="p-5">{med.quantity} Units</td>
+                    <td className="p-5">{med.quantity} {t('units')}</td>
                     <td className="p-5 text-gray-300">{med.expiry_date}</td>
                     <td className="p-5">
-                      <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} />
+                      <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} language={language} />
                     </td>
                   <td className="p-5 text-right">
                     <button type="button" onClick={() => handleDispenseMedication(med.id)} className="text-gray-500 hover:text-orange-400 p-2 rounded-lg hover:bg-orange-500/10 transition-all inline-flex items-center justify-center mr-1" title="Dispense/Sell">
@@ -916,8 +976,8 @@ function App() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
             <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
               <div className="p-6 border-b border-gray-800 bg-[#1E3A5F]/10 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-teal-400 flex items-center gap-2"><History /> Audit Trail</h3>
-                <span className="text-xs text-gray-500 uppercase tracking-widest font-bold">Latest 50 Actions</span>
+                <h3 className="text-xl font-bold text-teal-400 flex items-center gap-2"><History /> {t('auditTrail')}</h3>
+                <span className="text-xs text-gray-500 uppercase tracking-widest font-bold">{t('latestActions')}</span>
               </div>
               <div className="divide-y divide-gray-800/50">
                 {activityLogs.length === 0 ? (
@@ -959,9 +1019,9 @@ function App() {
 
         {activeView === 'alerts' && (
           <div className="bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-xl min-h-[200px]">
-            <h3 className="text-2xl font-bold text-red-400 mb-4">Active Alerts</h3>
+            <h3 className="text-2xl font-bold text-red-400 mb-4">{t('activeAlerts')}</h3>
             {alerts.length === 0 ? (
-              <p className="text-gray-400">No active alerts at the moment. Your inventory is in good shape!</p>
+              <p className="text-gray-400">{t('noAlerts')}</p>
             ) : (
               <div className="space-y-4">
                 {alerts.map(alert => (
@@ -1248,12 +1308,12 @@ function App() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleChat()}
-                  placeholder="Ask about your inventory..."
+                  placeholder={t('aiPlaceholder')}
                   className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-teal-500 transition-all"
                 />
                 <button 
                   onClick={handleChat}
-                  className="absolute right-2 top-1.5 p-1.5 bg-teal-500 text-black rounded-lg hover:bg-teal-400 transition-colors"
+                  className="absolute right-2 top-1.5 p-1.5 bg-teal-500 text-white rounded-lg hover:bg-teal-400 transition-colors"
                 >
                   <Send size={18} />
                 </button>
@@ -1285,31 +1345,31 @@ function App() {
               <form onSubmit={handleAddMedicationSubmit} className="space-y-4">
                 <div className="flex flex-col">
                   <label htmlFor="name" className="text-sm text-gray-400 mb-1">Name</label>
-                  <input type="text" id="name" name="name" value={newMedicationForm.name} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                  <input type="text" id="name" name="name" value={newMedicationForm.name} onChange={handleNewMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
                 </div>
                 <div className="flex flex-col">
                   <label htmlFor="category" className="text-sm text-gray-400 mb-1">Category</label>
-                  <input type="text" id="category" name="category" value={newMedicationForm.category} onChange={handleNewMedicationChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                  <input type="text" id="category" name="category" value={newMedicationForm.category} onChange={handleNewMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
                 </div>
                 <div className="flex flex-col">
                   <label htmlFor="quantity" className="text-sm text-gray-400 mb-1">Quantity</label>
-                  <input type="number" id="quantity" name="quantity" value={newMedicationForm.quantity} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
+                  <input type="number" id="quantity" name="quantity" value={newMedicationForm.quantity} onChange={handleNewMedicationChange} className="w-full bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
                 </div>
                 <div className="flex flex-col">
                   <label htmlFor="reorder_threshold" className="text-sm text-gray-400 mb-1">Reorder Threshold</label>
-                  <input type="number" id="reorder_threshold" name="reorder_threshold" value={newMedicationForm.reorder_threshold} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
+                  <input type="number" id="reorder_threshold" name="reorder_threshold" value={newMedicationForm.reorder_threshold} onChange={handleNewMedicationChange} className="w-full bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" required />
                 </div>
                 <div className="flex flex-col">
                   <label htmlFor="expiry_date" className="text-sm text-gray-400 mb-1">Expiry Date</label>
-                  <input type="date" id="expiry_date" name="expiry_date" value={newMedicationForm.expiry_date} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                  <input type="date" id="expiry_date" name="expiry_date" value={newMedicationForm.expiry_date} onChange={handleNewMedicationChange} className="w-full bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
                 </div>
                 <div className="flex flex-col">
                   <label htmlFor="price" className="text-sm text-gray-400 mb-1">Price</label>
-                  <input type="number" id="price" name="price" value={newMedicationForm.price} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
+                  <input type="number" id="price" name="price" value={newMedicationForm.price} onChange={handleNewMedicationChange} className="w-full bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
                 </div>
                 <div className="flex flex-col">
                   <label htmlFor="supplier_id" className="text-sm text-gray-400 mb-1">Supplier</label>
-                  <select id="supplier_id" name="supplier_id" value={newMedicationForm.supplier_id} onChange={handleNewMedicationChange} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500">
+                  <select id="supplier_id" name="supplier_id" value={newMedicationForm.supplier_id} onChange={handleNewMedicationChange} className="w-full bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500">
                     <option value="">Select a Supplier</option>
                     {suppliers.map(s => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -1327,7 +1387,7 @@ function App() {
                   </button>
                   <button 
                     type="submit" 
-                    className="bg-teal-500 hover:bg-teal-400 text-black px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
+                    className="bg-teal-500 hover:bg-teal-400 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
                   >
                     Add Medication
                   </button>
@@ -1359,36 +1419,36 @@ function App() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase">Name</label>
-                    <input type="text" name="name" value={editingMedication.name} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
+                    <input type="text" name="name" value={editingMedication.name} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
                   </div>
                   <div className="flex flex-col space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase">Category</label>
-                    <input type="text" name="category" value={editingMedication.category} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
+                    <input type="text" name="category" value={editingMedication.category} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase">Quantity</label>
-                    <input type="number" name="quantity" value={editingMedication.quantity} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" required />
+                    <input type="number" name="quantity" value={editingMedication.quantity} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" required />
                   </div>
                   <div className="flex flex-col space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase">Threshold</label>
-                    <input type="number" name="reorder_threshold" value={editingMedication.reorder_threshold} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" required />
+                    <input type="number" name="reorder_threshold" value={editingMedication.reorder_threshold} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase">Expiry Date</label>
-                    <input type="date" name="expiry_date" value={editingMedication.expiry_date} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
+                    <input type="date" name="expiry_date" value={editingMedication.expiry_date} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" required />
                   </div>
                   <div className="flex flex-col space-y-1">
                     <label className="text-xs font-bold text-gray-500 uppercase">Price ($)</label>
-                    <input type="number" name="price" value={editingMedication.price} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
+                    <input type="number" name="price" value={editingMedication.price} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500" min="0" step="0.01" required />
                   </div>
                 </div>
                 <div className="flex flex-col space-y-1">
                   <label className="text-xs font-bold text-gray-500 uppercase">Supplier</label>
-                  <select name="supplier_id" value={editingMedication.supplier_id || ''} onChange={handleEditMedicationChange} className="bg-gray-900 border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500">
+                  <select name="supplier_id" value={editingMedication.supplier_id || ''} onChange={handleEditMedicationChange} className="bg-gray-900 text-white border border-gray-700 rounded-xl p-3 focus:outline-none focus:border-teal-500">
                     <option value="">Select a Supplier</option>
                     {suppliers.map(s => (
                       <option key={s.id} value={s.id}>{s.name}</option>
@@ -1397,7 +1457,7 @@ function App() {
                 </div>
                 <div className="flex justify-end gap-4 pt-4">
                   <button type="button" onClick={closeEditMedicationModal} className="px-6 py-2.5 text-gray-400 hover:text-white font-semibold">Cancel</button>
-                  <button type="submit" className="bg-teal-500 hover:bg-teal-400 text-black px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-teal-500/20 transition-all">Update Entry</button>
+                  <button type="submit" className="bg-teal-500 hover:bg-teal-400 text-white px-8 py-2.5 rounded-xl font-bold shadow-lg shadow-teal-500/20 transition-all">Update Entry</button>
                 </div>
               </form>
             </motion.div>
@@ -1637,19 +1697,19 @@ function App() {
               <form onSubmit={handleAddSupplierSubmit} className="space-y-4">
                 <div className="flex flex-col">
                   <label className="text-sm text-gray-400 mb-1">Company Name</label>
-                  <input type="text" name="name" value={newSupplierForm.name} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                  <input type="text" name="name" value={newSupplierForm.name} onChange={handleNewSupplierChange} className="bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
                 </div>
                 <div className="flex flex-col">
                   <label className="text-sm text-gray-400 mb-1">Contact Person</label>
-                  <input type="text" name="contact_name" value={newSupplierForm.contact_name} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                  <input type="text" name="contact_name" value={newSupplierForm.contact_name} onChange={handleNewSupplierChange} className="bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
                 </div>
                 <div className="flex flex-col">
                   <label className="text-sm text-gray-400 mb-1">Email Address</label>
-                  <input type="email" name="email" value={newSupplierForm.email} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                  <input type="email" name="email" value={newSupplierForm.email} onChange={handleNewSupplierChange} className="bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
                 </div>
                 <div className="flex flex-col">
                   <label className="text-sm text-gray-400 mb-1">Phone Number</label>
-                  <input type="text" name="phone" value={newSupplierForm.phone} onChange={handleNewSupplierChange} className="bg-gray-900 border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
+                  <input type="text" name="phone" value={newSupplierForm.phone} onChange={handleNewSupplierChange} className="bg-gray-900 text-white border border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-teal-500" required />
                 </div>
                 <div className="flex justify-end gap-4 mt-6">
                   <button 
@@ -1661,7 +1721,7 @@ function App() {
                   </button>
                   <button 
                     type="submit" 
-                    className="bg-teal-500 hover:bg-teal-400 text-black px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
+                    className="bg-teal-500 hover:bg-teal-400 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-teal-500/20"
                   >
                     Save Supplier
                   </button>
@@ -1701,10 +1761,11 @@ const KPICard = ({ title, value, color = "text-white" }) => (
   </motion.div>
 );
 
-const StatusBadge = ({ qty, threshold }) => {
-  let config = { label: 'Healthy', color: 'bg-teal-500/10 text-teal-400 border-teal-500/20' };
-  if (qty === 0) config = { label: 'Stockout', color: 'bg-red-500/10 text-red-400 border-red-500/20' };
-  else if (qty <= 5) config = { label: 'Low Stock', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' };
+const StatusBadge = ({ qty, threshold, language }) => {
+  const labels = language === 'fr' ? { healthy: 'Sain', stockout: 'Rupture', low: 'Faible' } : { healthy: 'Healthy', stockout: 'Stockout', low: 'Low Stock' };
+  let config = { label: labels.healthy, color: 'bg-teal-500/10 text-teal-400 border-teal-500/20' };
+  if (qty === 0) config = { label: labels.stockout, color: 'bg-red-500/10 text-red-400 border-red-500/20' };
+  else if (qty <= 5) config = { label: labels.low, color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' };
   
   return (
     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${config.color}`}>
