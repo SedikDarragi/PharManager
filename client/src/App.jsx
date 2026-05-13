@@ -100,7 +100,7 @@ function App() {
         await fetchSuppliers();
         setChatHistory([{
           role: 'assistant',
-          content: `Good morning, ${user.username}! I'm PharmaCopilot. I've synced with your live inventory. How can I help you today?`
+          content: `Good morning, ${user.username}! I'm PharmAI. I've synced with your live inventory. How can I help you today?`
         }]);
       };
       initializeDashboard();
@@ -1191,59 +1191,76 @@ function App() {
 
       {/* Floating Copilot */}
       <motion.div
-        // Framer Motion will handle the animation based on isChatOpen state
-        initial={false} // Prevents initial animation on mount
-        animate={{ y: isChatOpen ? 0 : 'calc(100% - 60px)' }}
-        transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-        // Remove Tailwind's transition classes as Framer Motion handles it
-        className="fixed bottom-6 right-6 w-[400px] z-50"
+        layout
+        initial={false}
+        animate={{
+          width: isChatOpen ? 400 : 60,
+          height: isChatOpen ? 560 : 60,
+          borderRadius: isChatOpen ? '24px' : '30px',
+        }}
+        style={{ originX: 1, originY: 1 }}
+        transition={{ type: 'spring', stiffness: 250, damping: 25 }}
+        className="fixed bottom-6 right-6 z-50 shadow-2xl overflow-hidden bg-[#161B2D] border border-gray-800 flex flex-col"
       >
-        <div 
-          className="bg-teal-500 rounded-t-2xl p-4 flex justify-between items-center cursor-pointer shadow-2xl"
-          onClick={() => setIsChatOpen(!isChatOpen)}
-        >
-          <div className="flex items-center gap-2 text-black">
-            <MessageSquare size={20} fill="black" />
-            <span className="font-bold uppercase tracking-tighter text-sm">Pharmacist Copilot</span>
-          </div>
-          <div className="h-2 w-2 rounded-full bg-black animate-pulse" />
-        </div>
-        <div className="bg-[#161B2D] h-[500px] border-x border-b border-gray-800 flex flex-col p-4 shadow-2xl overflow-hidden"> {/* Added overflow-hidden */}
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar">
-            {chatHistory.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'user' ? 'bg-teal-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700'
-                }`}>
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-gray-800 p-3 rounded-2xl rounded-bl-none border border-gray-700">
-                  <Loader2 size={16} className="animate-spin text-teal-400" />
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            <input 
-              type="text" 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleChat()}
-              placeholder="Ask about your inventory..."
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-teal-500 transition-all"
-            />
-            <button 
-              onClick={handleChat}
-              className="absolute right-2 top-1.5 p-1.5 bg-teal-500 text-black rounded-lg hover:bg-teal-400 transition-colors"
+        {!isChatOpen ? (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="w-full h-full flex items-center justify-center bg-teal-500 text-black hover:bg-teal-400 transition-colors"
+          >
+            <MessageSquare size={24} fill="black" />
+          </button>
+        ) : (
+          <>
+            <div 
+              className="bg-teal-500 p-4 flex justify-between items-center cursor-pointer"
+              onClick={() => setIsChatOpen(false)}
             >
-              <Send size={18} />
-            </button>
-          </div>
-        </div>
+              <div className="flex items-center gap-2 text-black">
+                <MessageSquare size={20} fill="black" />
+                <span className="font-bold uppercase tracking-tighter text-sm">PharmAI</span>
+              </div>
+              <X size={20} className="text-black" />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-4 p-4 pr-2 custom-scrollbar">
+              {chatHistory.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === 'user' ? 'bg-teal-600 text-white rounded-br-none' : 'bg-gray-800 text-gray-200 rounded-bl-none border border-gray-700'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-800 p-3 rounded-2xl rounded-bl-none border border-gray-700">
+                    <Loader2 size={16} className="animate-spin text-teal-400" />
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 bg-gray-900/50 border-t border-gray-800">
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleChat()}
+                  placeholder="Ask about your inventory..."
+                  className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 px-4 text-sm focus:outline-none focus:border-teal-500 transition-all"
+                />
+                <button 
+                  onClick={handleChat}
+                  className="absolute right-2 top-1.5 p-1.5 bg-teal-500 text-black rounded-lg hover:bg-teal-400 transition-colors"
+                >
+                  <Send size={18} />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </motion.div>
 
       {/* Add Medication Modal */}

@@ -2,7 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { GoogleGenerativeAI } = require('@google/generative-ai'); // Import Google Generative AI
+const Groq = require('groq-sdk'); // Switch to Groq
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('./db/database');
@@ -96,31 +96,8 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({ token, user: { id: user.id, username: user.username, orgId: user.org_id, role: user.role } });
 });
 
-// Initialize Google Generative AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Temporary log to check if API key is loaded
-console.log("GEMINI_API_KEY loaded:", !!process.env.GEMINI_API_KEY);
-
-// Diagnostic: List all models available to this API Key
-(async () => {
-  try {
-    const result = await genAI.listModels();
-    console.log("Available Gemini Models:");
-    if (result.models) {
-      result.models.forEach(m => console.log(`- ${m.name}`));
-    }
-  } catch (error) {
-    console.error("Gemini Diagnostic Error:", error.message);
-    console.error("Please verify your GEMINI_API_KEY in the .env file.");
-  }
-})();
-
-// Using gemini-1.5-flash as it's the current standard and highly available
-const model = genAI.getGenerativeModel(
-  { model: "gemini-1.5-flash" },
-  { apiVersion: 'v1' }
-);
+// Initialize Groq
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // THE COPILOT ENDPOINT: The Unique Differentiator
 app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
@@ -142,7 +119,7 @@ app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
 
     // 2. Build the System Prompt
-    const systemPrompt = `You are PharmaCopilot, an expert AI pharmacist assistant. 
+    const systemPrompt = `You are PharmAI, an expert AI pharmacist assistant. 
     You have real-time access to the pharmacy inventory and supplier list. 
     CURRENT DATE: ${today}
     
@@ -164,34 +141,30 @@ app.post('/api/copilot/chat', authenticateToken, async (req, res) => {
     - Keep responses professional, concise, and clinical.
     - Use Markdown for tables or lists.`;
 
-    // 3. Call Gemini
-    // Convert history to Gemini format (user/model roles)
-    const geminiHistory = history
-      .filter((msg, index) => !(index === 0 && msg.role === 'assistant'))
-      .map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model', // Gemini uses 'model' for assistant responses
-        parts: [{ text: msg.content }]
-      }));
+    // 3. Call Groq with Llama 3.1
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...history.map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      })),
+      { role: "user", content: message }
+    ];
 
-    // Prepend the system prompt to the current user message for each turn.
-    // This ensures the system context is always fresh and explicitly provided
-    // to the model, as Gemini Pro doesn't have a dedicated 'system' role.
-    const fullUserMessage = `${systemPrompt}\n\nUser's Query: ${message}`;
-
-    const chat = model.startChat({
-      history: geminiHistory,
-      generationConfig: {
-        maxOutputTokens: 1024, // Equivalent to Anthropic's max_tokens
-      },
+    const completion = await groq.chat.completions.create({
+      messages: messages,
+      model: "llama-3.1-8b-instant",
+      temperature: 0.5,
+      max_tokens: 1024,
+      top_p: 1,
+      stream: false
     });
 
-    const result = await chat.sendMessage(fullUserMessage);
-    const responseText = result.response.text();
-
+    const responseText = completion.choices[0]?.message?.content || "I couldn't process that request.";
     res.json({ reply: responseText });
   } catch (error) {
     console.error("Copilot Error:", error);
-    res.status(500).json({ error: "Copilot is resting. Try again later. (Gemini API Error)" });
+    res.status(500).json({ error: "Copilot is having trouble connecting to the AI engine." });
   }
 });
 
