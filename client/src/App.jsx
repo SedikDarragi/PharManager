@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2, Shield, Building2, Users, History, PlusCircle, RefreshCw, XCircle, Truck, Phone, Mail, ShoppingCart, TrendingUp, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2, Shield, Building2, Users, History, PlusCircle, RefreshCw, XCircle, Truck, Phone, Mail, ShoppingCart, TrendingUp, DollarSign, Download } from 'lucide-react';
 import axios from 'axios';
 import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -498,20 +498,55 @@ function App() {
   };
 
   const handleDispenseMedication = async (medId) => {
-    const dispenseQty = prompt(`How many units of this medication would you like to dispense?`, "1");
+    const dispenseQty = prompt(`How many units to dispense?`, "1");
     if (!dispenseQty || isNaN(dispenseQty) || parseInt(dispenseQty) <= 0) return;
 
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       await axios.post(`${API_BASE_URL}/sales`, { 
         medId, 
-        quantity: parseInt(dispenseQty) 
+        quantity: parseInt(dispenseQty)
       }, config);
       await fetchData(); // Refresh inventory and summary
       await fetchSalesData(); // Refresh sales history and revenue charts
       alert("Dispensing successful!");
     } catch (err) {
       alert(err.response?.data?.error || "Failed to dispense medication");
+    }
+  };
+
+  const handleExportInventory = async () => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const res = await axios.get(`${API_BASE_URL}/medications/export`, config);
+      const data = res.data;
+
+      if (data.length === 0) {
+        alert("No data available to export.");
+        return;
+      }
+
+      // CSV Generation
+      const headers = ["Name", "Category", "Supplier", "Quantity", "Reorder Threshold", "Expiry Date", "Price ($)"];
+      const csvRows = [
+        headers.join(','), // Header row
+        ...data.map(row => [
+          `"${row.name}"`, `"${row.category}"`, `"${row.supplier_name || 'N/A'}"`, 
+          row.quantity, row.reorder_threshold, row.expiry_date, row.price
+        ].join(','))
+      ];
+
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pharmanage_inventory_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Failed to export inventory data.");
     }
   };
 
@@ -635,6 +670,9 @@ function App() {
             <p className="text-gray-400">Welcome back, Pharmacist.</p>
           </div>
           <div className="flex gap-4 items-center">
+            <button onClick={handleExportInventory} className="bg-gray-800 hover:bg-gray-700 text-gray-300 p-2.5 rounded-xl border border-gray-700 transition-all flex items-center gap-2" title="Export to CSV">
+              <Download size={20} /> <span className="text-sm font-bold">Export</span>
+            </button>
             <button onClick={() => { setIsAdminAction(false); setAuthError(''); setShowClearStockModal(true); }} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-6 py-2.5 rounded-xl font-bold transition-all border border-red-500/20">
               Clear Stock
             </button>

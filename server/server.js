@@ -201,6 +201,11 @@ app.get('/api/medications', authenticateToken, (req, res) => {
   res.json(meds);
 });
 
+app.get('/api/medications/export', authenticateToken, (req, res) => {
+  const meds = db.prepare('SELECT m.name, m.category, s.name as supplier_name, m.quantity, m.reorder_threshold, m.expiry_date, m.price FROM medications m LEFT JOIN suppliers s ON m.supplier_id = s.id WHERE m.org_id = ?').all(req.user.orgId);
+  res.json(meds);
+});
+
 app.post('/api/medications', authenticateToken, (req, res) => {
   const { name, category, quantity, reorder_threshold, expiry_date, price, supplier_id } = req.body;
   const stmt = db.prepare(`
