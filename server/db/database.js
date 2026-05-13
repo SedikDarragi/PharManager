@@ -24,6 +24,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS medications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     org_id INTEGER,
+    supplier_id INTEGER,
     name TEXT,
     category TEXT,
     quantity INTEGER,
@@ -31,7 +32,19 @@ db.exec(`
     expiry_date DATE,
     price REAL,
     last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (org_id) REFERENCES organizations (id)
+    FOREIGN KEY (org_id) REFERENCES organizations (id),
+    FOREIGN KEY (supplier_id) REFERENCES suppliers (id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS suppliers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_id INTEGER,
+    name TEXT,
+    contact_name TEXT,
+    email TEXT,
+    phone TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organizations (id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS alerts (
@@ -44,6 +57,31 @@ db.exec(`
     status TEXT DEFAULT 'active',
     FOREIGN KEY (org_id) REFERENCES organizations (id),
     FOREIGN KEY (med_id) REFERENCES medications (id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS activity_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_id INTEGER,
+    user_id INTEGER,
+    action TEXT, -- 'ADD', 'UPDATE', 'DELETE', 'CLEAR'
+    details TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organizations (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_id INTEGER,
+    med_id INTEGER,
+    user_id INTEGER,
+    quantity INTEGER,
+    price_at_sale REAL,
+    total REAL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (org_id) REFERENCES organizations (id) ON DELETE CASCADE,
+    FOREIGN KEY (med_id) REFERENCES medications (id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
   );
 `);
 
@@ -61,6 +99,13 @@ if (!seedOrg) {
   seedOrg = { id: info.lastInsertRowid };
 }
 
+let seedSupplier = db.prepare('SELECT id FROM suppliers WHERE name = ?').get('Global Med Distrib');
+if (!seedSupplier) {
+  const info = db.prepare('INSERT INTO suppliers (org_id, name, contact_name, email, phone) VALUES (?, ?, ?, ?, ?)')
+    .run(seedOrg.id, 'Global Med Distrib', 'John Doe', 'orders@globalmed.com', '555-0199');
+  seedSupplier = { id: info.lastInsertRowid };
+}
+
 let adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 if (!adminUser) {
   const hashedAdminPassword = bcrypt.hashSync('admin123', 10);
@@ -76,15 +121,15 @@ if (!testAdmin) {
 
 // Run seeding...
 const insertMed = db.prepare(`
-  INSERT INTO medications (org_id, name, category, quantity, reorder_threshold, expiry_date, price)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO medications (org_id, supplier_id, name, category, quantity, reorder_threshold, expiry_date, price)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 const checkCount = db.prepare('SELECT count(*) as count FROM medications').get();
 if (checkCount.count === 0) {
   const transaction = db.transaction((meds) => {
     for (const med of meds) {
-      insertMed.run(seedOrg.id, med.name, med.category, med.qty, med.threshold, med.expiry, med.price);
+      insertMed.run(seedOrg.id, seedSupplier.id, med.name, med.category, med.qty, med.threshold, med.expiry, med.price);
     }
   });
   transaction(seedMeds);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2, Shield, Building2, Users, History, PlusCircle, RefreshCw, XCircle, Truck, Phone, Mail } from 'lucide-react';
+import { LayoutDashboard, Package, Bell, MessageSquare, AlertTriangle, Send, Loader2, LogOut, User, Lock, X, Pencil, Trash2, Shield, Building2, Users, History, PlusCircle, RefreshCw, XCircle, Truck, Phone, Mail, ShoppingCart, TrendingUp, DollarSign } from 'lucide-react';
 import axios from 'axios';
-import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 import { AnimatePresence, motion } from 'framer-motion';
 import './index.css'; // Import the main CSS file here
 
@@ -31,6 +31,10 @@ function App() {
 
   // Activity History State
   const [activityLogs, setActivityLogs] = useState([]);
+
+  // Sales State
+  const [salesRecords, setSalesRecords] = useState([]);
+  const [revenueChartData, setRevenueData] = useState([]);
 
   // Supplier State
   const [suppliers, setSuppliers] = useState([]);
@@ -92,6 +96,8 @@ function App() {
     if (user) {
       const initializeDashboard = async () => {
         await fetchData();
+        await fetchSalesData();
+        await fetchSuppliers();
         setChatHistory([{
           role: 'assistant',
           content: `Good morning, ${user.username}! I'm PharmaCopilot. I've synced with your live inventory. How can I help you today?`
@@ -160,8 +166,25 @@ function App() {
     }
   };
 
+  const fetchSalesData = async () => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      const [salesRes, revRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/sales`, config),
+        axios.get(`${API_BASE_URL}/analytics/revenue`, config)
+      ]);
+      setSalesRecords(salesRes.data);
+      setRevenueData(revRes.data);
+    } catch (err) {
+      console.error("Sales fetch error:", err);
+    }
+  };
+
   useEffect(() => {
-    if (activeView === 'history' && user) fetchActivityLogs();
+    if (user) {
+      if (activeView === 'history') fetchActivityLogs();
+      if (activeView === 'sales') fetchSalesData();
+    }
   }, [activeView, user]);
 
   const fetchSuppliers = async () => {
@@ -474,6 +497,24 @@ function App() {
     }
   };
 
+  const handleDispenseMedication = async (medId) => {
+    const dispenseQty = prompt(`How many units of this medication would you like to dispense?`, "1");
+    if (!dispenseQty || isNaN(dispenseQty) || parseInt(dispenseQty) <= 0) return;
+
+    try {
+      const config = { headers: { Authorization: `Bearer ${user.token}` } };
+      await axios.post(`${API_BASE_URL}/sales`, { 
+        medId, 
+        quantity: parseInt(dispenseQty) 
+      }, config);
+      await fetchData(); // Refresh inventory and summary
+      await fetchSalesData(); // Refresh sales history and revenue charts
+      alert("Dispensing successful!");
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to dispense medication");
+    }
+  };
+
   const handleClearStockSubmit = async (e) => {
     e.preventDefault();
     setAuthError(''); // Clear any previous errors
@@ -568,6 +609,7 @@ function App() {
         <div className="flex flex-col gap-2">
           <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" isActive={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <NavItem icon={<Package size={20} />} label="Inventory" isActive={activeView === 'inventory'} onClick={() => setActiveView('inventory')} />
+          <NavItem icon={<DollarSign size={20} />} label="Sales" isActive={activeView === 'sales'} onClick={() => setActiveView('sales')} />
           <NavItem icon={<Truck size={20} />} label="Suppliers" isActive={activeView === 'suppliers'} onClick={() => setActiveView('suppliers')} />
           <NavItem icon={<History size={20} />} label="History" isActive={activeView === 'history'} onClick={() => setActiveView('history')} />
           {user.role !== 'admin' && (
@@ -718,6 +760,75 @@ function App() {
           </motion.div>
         )}
 
+        {activeView === 'sales' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 bg-[#161B2D] p-6 rounded-2xl border border-gray-800 shadow-xl">
+                <h3 className="text-xl font-bold text-teal-400 mb-6 flex items-center gap-2">
+                  <TrendingUp size={20}/> Revenue Trend (Last 7 Days)
+                </h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={revenueChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                      <XAxis dataKey="date" stroke="#9CA3AF" fontSize={10} tickFormatter={(str) => str.split('-').slice(1).join('/')} />
+                      <YAxis stroke="#9CA3AF" fontSize={10} tickFormatter={(val) => `$${val}`} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: COLORS.card, border: '1px solid #374151', borderRadius: '12px' }}
+                        itemStyle={{ color: COLORS.accent }}
+                      />
+                      <Line type="monotone" dataKey="revenue" stroke={COLORS.accent} strokeWidth={3} dot={{ r: 4, fill: COLORS.accent }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <KPICard title="Total Transactions" value={salesRecords.length} color="text-teal-400" />
+                <KPICard title="Daily Average" value={`$${(revenueChartData.reduce((a, b) => a + b.revenue, 0) / (revenueChartData.length || 1)).toFixed(2)}`} />
+              </div>
+            </div>
+
+            <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+              <div className="p-6 border-b border-gray-800 bg-[#1E3A5F]/10">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><ShoppingCart size={20} className="text-orange-400" /> Transaction Log</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-900/50 text-gray-400 text-[10px] font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="p-4">Timestamp</th>
+                      <th className="p-4">Medication</th>
+                      <th className="p-4">Qty</th>
+                      <th className="p-4">Unit Price</th>
+                      <th className="p-4">Total</th>
+                      <th className="p-4">Dispensed By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-800">
+                    {salesRecords.map(sale => (
+                      <tr key={sale.id} className="text-sm hover:bg-gray-800/20 transition-colors">
+                        <td className="p-4 text-gray-500 font-mono text-xs">
+                          {new Date(sale.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="p-4 font-semibold text-white">{sale.med_name || 'Deleted Medication'}</td>
+                        <td className="p-4 text-gray-300">{sale.quantity}</td>
+                        <td className="p-4 text-gray-400">${sale.price_at_sale.toFixed(2)}</td>
+                        <td className="p-4 text-teal-400 font-bold">${sale.total.toFixed(2)}</td>
+                        <td className="p-4">
+                          <span className="bg-gray-800 px-2 py-1 rounded text-xs text-gray-300">{sale.username}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {salesRecords.length === 0 && (
+                  <div className="p-10 text-center text-gray-500 italic">No transactions recorded yet.</div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {(activeView === 'dashboard' || activeView === 'inventory') && (
           <div className="bg-[#161B2D] rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
             <table className="w-full text-left">
@@ -746,6 +857,9 @@ function App() {
                       <StatusBadge qty={med.quantity} threshold={med.reorder_threshold} />
                     </td>
                   <td className="p-5 text-right">
+                    <button type="button" onClick={() => handleDispenseMedication(med.id)} className="text-gray-500 hover:text-orange-400 p-2 rounded-lg hover:bg-orange-500/10 transition-all inline-flex items-center justify-center mr-1" title="Dispense/Sell">
+                      <ShoppingCart size={16} />
+                    </button>
                     <button type="button" onClick={() => openEditMedicationModal(med)} className="text-gray-500 hover:text-teal-400 p-2 rounded-lg hover:bg-teal-500/10 transition-all inline-flex items-center justify-center mr-1">
                       <Pencil size={16} />
                     </button>
