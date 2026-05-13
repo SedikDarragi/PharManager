@@ -35,6 +35,14 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Middleware to check for Admin role
+const isAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: "Access denied. Admin role required." });
+  }
+  next();
+};
+
 // Auth Routes
 app.post('/api/auth/register', async (req, res) => {
   const { username, password, organizationName } = req.body;
@@ -53,8 +61,9 @@ app.post('/api/auth/register', async (req, res) => {
     const newUser = { id: info.lastInsertRowid, username, orgId: org.id, role: 'pharmacist' };
     const token = jwt.sign({ 
       id: newUser.id, 
-      username: newUser.username, 
-      orgId: newUser.orgId 
+      username: newUser.username,
+      orgId: newUser.orgId,
+      role: newUser.role
     }, JWT_SECRET, { expiresIn: '24h' });
 
     res.json({ success: true, user: newUser, token });
@@ -74,10 +83,11 @@ app.post('/api/auth/login', async (req, res) => {
   const token = jwt.sign({ 
     id: user.id, 
     username: user.username, 
-    orgId: user.org_id 
+    orgId: user.org_id,
+    role: user.role
   }, JWT_SECRET, { expiresIn: '24h' });
 
-  res.json({ token, user: { id: user.id, username: user.username, orgId: user.org_id } });
+  res.json({ token, user: { id: user.id, username: user.username, orgId: user.org_id, role: user.role } });
 });
 
 // Initialize Google Generative AI
@@ -236,6 +246,87 @@ app.get('/api/organization/details', authenticateToken, (req, res) => {
 app.get('/api/organization/members', authenticateToken, (req, res) => {
   const members = db.prepare('SELECT id, username, role, created_at FROM users WHERE org_id = ?').all(req.user.orgId);
   res.json(members);
+});
+
+// Global Admin Management Routes
+app.get('/api/admin/organizations', authenticateToken, isAdmin, (req, res) => {
+  const orgs = db.prepare(`
+    SELECT o.*, 
+    (SELECT COUNT(*) FROM users u WHERE u.org_id = o.id) as userCount,
+    (SELECT COUNT(*) FROM medications m WHERE m.org_id = o.id) as stockCount
+    FROM organizations o
+  `).all();
+  res.json(orgs);
+});
+
+app.get('/api/admin/organizations/:id/users', authenticateToken, isAdmin, (req, res) => {
+  const users = db.prepare('SELECT id, username, role, created_at FROM users WHERE org_id = ?').all(req.params.id);
+  res.json(users);
+});
+
+app.get('/api/admin/organizations/:id/medications', authenticateToken, isAdmin, (req, res) => {
+  const meds = db.prepare('SELECT * FROM medications WHERE org_id = ?').all(req.params.id);
+  res.json(meds);
+});
+
+app.put('/api/admin/medications/:id', authenticateToken, isAdmin, (req, res) => {
+  const { name, category, quantity, reorder_threshold, expiry_date, price } = req.body;
+  const medId = req.params.id;
+  const med = db.prepare('SELECT org_id FROM medications WHERE id = ?').get(medId);
+  if (!med) return res.status(404).json({ error: "Medication not found." });
+  
+  db.prepare('UPDATE medications SET name = ?, category = ?, quantity = ?, reorder_threshold = ?, expiry_date = ?, price = ? WHERE id = ?')
+    .run(name, category, quantity, reorder_threshold, expiry_date, price, medId);
+  db.refreshAlerts(med.org_id);
+  res.json({ success: true });
+});
+
+app.delete('/api/admin/medications/:id', authenticateToken, isAdmin, (req, res) => {
+  const medId = req.params.id;
+  const med = db.prepare('SELECT org_id FROM medications WHERE id = ?').get(medId);
+  if (med) {
+    db.prepare('DELETE FROM alerts WHERE med_id = ?').run(medId);
+    db.prepare('DELETE FROM medications WHERE id = ?').run(medId);
+    db.refreshAlerts(med.org_id);
+  }
+  res.json({ success: true });
+});
+
+app.get('/api/admin/users', authenticateToken, isAdmin, (req, res) => {
+  const users = db.prepare(`
+    SELECT u.id, u.username, u.role, u.created_at, o.name as organizationName 
+    FROM users u 
+    JOIN organizations o ON u.org_id = o.id
+  `).all();
+  res.json(users);
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, isAdmin, (req, res) => {
+  if (req.params.id == req.user.id) {
+    return res.status(400).json({ error: "You cannot delete your own admin account." });
+  }
+  db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+app.delete('/api/admin/organizations/:id/medications/clear', authenticateToken, isAdmin, (req, res) => {
+  const orgId = req.params.id;
+  db.transaction(() => {
+    db.prepare('DELETE FROM alerts WHERE org_id = ?').run(orgId);
+    db.prepare('DELETE FROM medications WHERE org_id = ?').run(orgId);
+  })();
+  db.refreshAlerts(orgId);
+  res.json({ success: true });
+});
+
+app.delete('/api/admin/organizations/:id', authenticateToken, isAdmin, (req, res) => {
+  db.transaction(() => {
+    db.prepare('DELETE FROM alerts WHERE org_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM medications WHERE org_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM users WHERE org_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM organizations WHERE id = ?').run(req.params.id);
+  })();
+  res.json({ success: true });
 });
 
 app.listen(5000, () => console.log('Backend running on port 5000'));

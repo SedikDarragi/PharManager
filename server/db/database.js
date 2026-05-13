@@ -1,4 +1,5 @@
 const Database = require('better-sqlite3');
+const bcrypt = require('bcryptjs');
 const db = new Database('pharmacy.db');
 
 db.exec("PRAGMA foreign_keys = ON;");
@@ -62,7 +63,15 @@ if (!seedOrg) {
 
 let adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
 if (!adminUser) {
-  db.prepare('INSERT INTO users (username, password, role, org_id) VALUES (?, ?, ?, ?)').run('admin', 'admin123', 'admin', seedOrg.id);
+  const hashedAdminPassword = bcrypt.hashSync('admin123', 10);
+  const info = db.prepare('INSERT INTO users (username, password, role, org_id) VALUES (?, ?, ?, ?)').run('admin', hashedAdminPassword, 'admin', seedOrg.id);
+  adminUser = { id: info.lastInsertRowid };
+}
+
+let testAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('test_admin');
+if (!testAdmin) {
+  const hashedTestPassword = bcrypt.hashSync('testadmin2024', 10);
+  db.prepare('INSERT INTO users (username, password, role, org_id) VALUES (?, ?, ?, ?)').run('test_admin', hashedTestPassword, 'admin', seedOrg.id);
 }
 
 // Run seeding...
