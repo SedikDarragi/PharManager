@@ -1,4 +1,4 @@
-# PharManage 💊
+# PharManage
 
 PharManage is a professional-grade, multi-tenant Pharmacy Management System (PMS) designed to streamline inventory control, supplier relations, and financial tracking. It features **PharmAI**, an integrated AI assistant that provides real-time insights into your stock and sales data.
 
@@ -7,32 +7,32 @@ PharManage is a professional-grade, multi-tenant Pharmacy Management System (PMS
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
-### 🧠 PharmAI Assistant
+### PharmAI Assistant
 Powered by **Groq (Llama 3.1)**, PharmAI acts as a clinical co-pilot. Ask questions about your inventory levels, expiry risks, or sales performance in natural language (English or French).
 
-### 🏢 Organizational Multi-Tenancy
+### Organizational Multi-Tenancy
 Built for scale. Users sign up under specific Organizations (Clinics/Pharmacies). Stock levels, supplier lists, and alerts are synchronized in real-time across all members of the same organization.
 
-### 📦 Advanced Inventory & Suppliers
+### Advanced Inventory & Suppliers
 - **Smart Tracking**: Monitor stock with automatic "Low Stock" and "Expiry" alerts.
 - **Supplier Directory**: Link medications to specific distributors for streamlined reordering.
 - **Data Integrity**: Full CRUD operations for stock with enforced referential integrity.
 
-### 💰 Sales & Analytics
+### Sales & Analytics
 - **Dispensing Module**: Real-time stock reduction upon sale.
 - **Financial Intelligence**: Dashboard featuring revenue trend lines and category distribution charts.
 - **Export Capability**: Generate one-click CSV reports for audits or accounting.
 
-### 🛡️ Security & Accountability
+### Security & Accountability
 - **Audit Trail**: A permanent, non-destructive activity log tracking who added, updated, or deleted any record.
 - **Role-Based Access**: Dedicated Admin Panel for global oversight of organizations and user accounts.
 - **JWT Authentication**: Secure session management with persistent language preferences.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 **Frontend:**
 - React.js (Vite)
@@ -50,7 +50,7 @@ Built for scale. Users sign up under specific Organizations (Clinics/Pharmacies)
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
